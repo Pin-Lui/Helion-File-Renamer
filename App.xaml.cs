@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace EPRenamer
+namespace Helion
 {
     /// <summary>
     /// Interaction logic for App.xaml

@@ -1,10 +1,14 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
-namespace EPRenamer
+namespace Helion
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -18,7 +22,7 @@ namespace EPRenamer
         private const string ListGenErrorMsg = "Generating List.txt failed";
         private const string RenameSTitelErrorMsg = "Input Show Titel and Select a Season";
         private const string NoListFoundErrorMsg = "No List.txt Found, Generate it first.";
-        private const string DialogBoxTitel = "Rename Files to This?";
+        private const string DefaultFileNamePattern = "{Titel} {SNr} {ENr} - {EPName}";
         private const string RenameSuccessMsg = "Files Renamed!";
         private const string ListGeneratedSuccessMsg = "EP List.txt generated!";
         private const string NoFilesFoundMsg = "No Files Found!";
@@ -29,7 +33,7 @@ namespace EPRenamer
         private readonly string _PathToListCSV;
         private readonly string _PathToAllShowCSV;
 
-        private static MainWindow _gui;
+        private static MainWindow _GUI_MainWindow;
 
         #endregion Felder
 
@@ -38,13 +42,15 @@ namespace EPRenamer
         public MainWindow()
         {
             InitializeComponent();
-            _gui = this;
+            _GUI_MainWindow = this;
             _AppDir = (AppDomain.CurrentDomain.BaseDirectory);
             _PathToListTXT = (_AppDir + "\\list.txt");
             _PathToListCSV = (_AppDir + "\\list.csv");
             _PathToAllShowCSV = (_AppDir + "\\allshows.csv");
             TxB_SeriesSearch.Text = TutMsg;
             TxB_FileExtension.Text = FileExtension;
+            TxB_NewFileNamePattern.Text = DefaultFileNamePattern;
+
         }
 
         #endregion Konstruktor
@@ -53,7 +59,12 @@ namespace EPRenamer
 
         public static void Cout(string text)
         {
-            _gui.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() => _gui.Lbl_Cout.Content = text));
+            _GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() => _GUI_MainWindow.Lbl_Cout.Content = text));
+        }
+
+        public string GetNewFileNamePattern()
+        {
+            return TxB_NewFileNamePattern.Text;
         }
 
         #endregion Public()
@@ -63,7 +74,7 @@ namespace EPRenamer
         private async void Btn_Search_Click(object sender, RoutedEventArgs e)
         {
             // Disable GUI elements
-            GuiActivated(false);
+            GUIStatus(false);
 
             // Clear the ComboBox for selecting a show and its text
             if (!string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
@@ -76,7 +87,7 @@ namespace EPRenamer
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || TxB_SeriesSearch.Text.Equals(TutMsg))
             {
                 Cout("Input a Show Titel");
-                GuiActivated(true);
+                GUIStatus(true);
                 return;
             }
 
@@ -91,7 +102,7 @@ namespace EPRenamer
                 // Check if the file exists and is not empty
                 if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -114,7 +125,7 @@ namespace EPRenamer
                 // If no matches were found, activate the GUI and return
                 if (CmB_SelectShow.Items.Count == 0)
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -130,13 +141,13 @@ namespace EPRenamer
                 MessageBox.Show(ex.Message);
             }
 
-            GuiActivated(true);
+            GUIStatus(true);
         }
 
         private async void Btn_SelectShow_Click(object sender, RoutedEventArgs e)
         {
             // Deactivate the GUI
-            GuiActivated(false);
+            GUIStatus(false);
 
             // Clear the CmB_SelectSeason items and text if they are not null or whitespace
             if (!string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
@@ -149,7 +160,7 @@ namespace EPRenamer
             if (string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
             {
                 Cout(RenameSTitelErrorMsg);
-                GuiActivated(true);
+                GUIStatus(true);
                 return;
             }
 
@@ -161,7 +172,7 @@ namespace EPRenamer
                 // If the CSV file doesn't exist, activate the GUI and return
                 if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -174,7 +185,7 @@ namespace EPRenamer
                 // If the episode CSV file doesn't exist, activate the GUI and return
                 if (!CSVFileHandler.CheckforFiles(_PathToListCSV))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -184,7 +195,7 @@ namespace EPRenamer
                 // If there are no seasons, activate the GUI and return
                 if (seasonSize == 0)
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -200,7 +211,7 @@ namespace EPRenamer
 
                 if (CmB_SelectSeason.Items.Count == 0)
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -212,18 +223,18 @@ namespace EPRenamer
                 MessageBox.Show(ex.Message);
             }
 
-            GuiActivated(true);
+            GUIStatus(true);
         }
 
         private async void Btn_GenSeasonEPNameList_Click(object sender, RoutedEventArgs e)
         {
             // Disable buttons to prevent further actions
-            GuiActivated(false);
+            GUIStatus(false);
 
             // Check if the show and season comboboxes have a selected value
             if (string.IsNullOrWhiteSpace(CmB_SelectShow.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
             {
-                GuiActivated(true);
+                GUIStatus(true);
                 //output error message if series name or season number is missing
                 Cout(RenameSTitelErrorMsg);
                 return;
@@ -237,7 +248,7 @@ namespace EPRenamer
                 // Check if the All Shows csv file was downloaded successfully
                 if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -250,7 +261,7 @@ namespace EPRenamer
                 // Check if the episode csv file was downloaded successfully
                 if (!CSVFileHandler.CheckforFiles(_PathToListCSV))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     return;
                 }
 
@@ -263,7 +274,7 @@ namespace EPRenamer
                 // Generate the episode name list for the selected season
                 if (!CSVFileHandler.GetSeasonTXTFile(CmB_SelectShow.Text, seasonNr))
                 {
-                    GuiActivated(true);
+                    GUIStatus(true);
                     Cout(ListGenErrorMsg);
                     return;
                 }
@@ -277,18 +288,18 @@ namespace EPRenamer
             }
 
             // Activate buttons
-            GuiActivated(true);
+            GUIStatus(true);
         }
 
         private void Btn_RenameFilesWithList_Click(object sender, RoutedEventArgs e)
         {
             //Dectivate GUI elements
-            GuiActivated(false);
+            GUIStatus(false);
 
             //check if the series name and season number have been entered by the user
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
             {
-                GuiActivated(true);
+                GUIStatus(true);
                 //output error message if series name or season number is missing
                 Cout(RenameSTitelErrorMsg);
                 return;
@@ -297,7 +308,7 @@ namespace EPRenamer
             //Check if list file exists
             if (!CSVFileHandler.CheckforFiles(_PathToListTXT))
             {
-                GuiActivated(true);
+                GUIStatus(true);
                 //output error message if list file is missing
                 Cout(NoListFoundErrorMsg);
                 return;
@@ -308,36 +319,74 @@ namespace EPRenamer
             string sNumber = sNr <= 9 ? "0" + Convert.ToString(sNr) : Convert.ToString(sNr);
 
             //create a preview of the new file names using the series name, season number, and file extension
-            List<string> fileName = FileNameHandler.FileNamePreview(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
-            var message = string.Join(Environment.NewLine, fileName);
+            List<string[]> fileName = FileNameHandler.DataGridPreview(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
 
             //check if there are any files that match the search criteria
-            if (string.IsNullOrEmpty(message) || string.IsNullOrWhiteSpace(message))
+            if (fileName.Count == 0)
             {
                 Cout(NoFilesFoundMsg);
-                GuiActivated(true);
+                GUIStatus(true);
                 return;
             }
 
-            //show a dialog box displaying the new file names for confirmation
+            // Show the second window as a modal dialog
+            var gridViewWindowResult = new GridViewWindow();
 
-            MessageBoxResult dialogResult = MessageBox.Show(message, DialogBoxTitel, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            // Get the instance of the second window
+            GridViewWindow gridViewWindow = (GridViewWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window is GridViewWindow);
 
-            //if the user confirms, rename the files
-            if (dialogResult == MessageBoxResult.Yes)
+            if (gridViewWindow == null)
+            {
+                GUIStatus(true);
+                return;
+            }
+
+            gridViewWindow.DataGrid.ItemsSource = fileName;
+
+            // Create and define the columns for the DataGrid
+            DataGridTextColumn oldNameColumn = new DataGridTextColumn();
+            oldNameColumn.Header = "Old Name";
+            oldNameColumn.Binding = new Binding("[0]"); // Bind to the first element of the array
+            oldNameColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star); // Set width to fill available space
+            oldNameColumn.FontSize = 13;
+            oldNameColumn.FontFamily = new FontFamily("Poppins");
+
+            DataGridTextColumn middleColumn = new DataGridTextColumn();
+            middleColumn.Header = "Separator";
+            middleColumn.Binding = new Binding("[1]"); // Bind to the second element of the array
+            middleColumn.FontSize = 13;
+            middleColumn.FontFamily = new FontFamily("Poppins");
+
+            DataGridTextColumn newNameColumn = new DataGridTextColumn();
+            newNameColumn.Header = "New Name";
+            newNameColumn.Binding = new Binding("[2]"); // Bind to the third element of the array
+            newNameColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star); // Set width to fill available space
+            newNameColumn.FontSize = 13;
+            newNameColumn.FontFamily = new FontFamily("Poppins");
+
+            // Add the columns to the DataGrid
+            gridViewWindow.DataGrid.Columns.Add(oldNameColumn);
+            gridViewWindow.DataGrid.Columns.Add(middleColumn);
+            gridViewWindow.DataGrid.Columns.Add(newNameColumn);
+
+            gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
+
+            // Open the Window
+            bool? result = gridViewWindowResult.ShowDialog();
+
+            // Check the dialog result
+            if (result == true)
             {
                 FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
                 Cout(RenameSuccessMsg);
             }
-            //if the user cancels, don't rename the files
-            else if (dialogResult == MessageBoxResult.No)
+            else
             {
-                GuiActivated(true);
+                GUIStatus(true);
                 return;
             }
 
-            //activate GUI elements
-            GuiActivated(true);
+            GUIStatus(true);
         }
 
         #endregion Buttons
@@ -350,13 +399,13 @@ namespace EPRenamer
             Cout(Convert.ToString(progressPercentage) + "%");
 
             // Update the progress bar value
-            _gui.PgB_Main.Value = progressPercentage;
+            _GUI_MainWindow.PgB_Main.Value = progressPercentage;
 
             // Check if the progress has reached 100%
-            if (_gui.PgB_Main.Value == 100)
+            if (_GUI_MainWindow.PgB_Main.Value == 100)
             {
                 // Reset the progress bar value
-                _gui.PgB_Main.Value = 0;
+                _GUI_MainWindow.PgB_Main.Value = 0;
             }
         }
 
@@ -376,15 +425,15 @@ namespace EPRenamer
             await client.StartDownload();
         }
 
-        private static void GuiActivated(bool state)
+        private static void GUIStatus(bool state)
         {
             // Create a list of buttons that need to have their state changed
             List<Button> buttons = new()
             {
-                _gui.Btn_Search,
-                _gui.Btn_SelectShow,
-                _gui.Btn_GenSeasonEPNameList,
-                _gui.Btn_RenameFilesWithList
+                _GUI_MainWindow.Btn_Search,
+                _GUI_MainWindow.Btn_SelectShow,
+                _GUI_MainWindow.Btn_GenSeasonEPNameList,
+                _GUI_MainWindow.Btn_RenameFilesWithList
             };
 
             // Iterate through the list of buttons
@@ -415,17 +464,6 @@ namespace EPRenamer
 
         }
 
-        private static string RemoveInvalidChars(string input)
-        {
-            return input.Replace(";", "")
-                        .Replace("'", "")
-                        .Replace("\"", "")
-                        .Replace("\\", "")
-                        .Replace("<", "")
-                        .Replace(">", "")
-                        .Replace("&", "");
-        }
-
         #endregion Private()
 
         #region Events()
@@ -451,31 +489,32 @@ namespace EPRenamer
 
         private void TxB_SeriesSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (TxB_SeriesSearch.Text.Contains(';')  ||
-                TxB_SeriesSearch.Text.Contains('\'') ||
-                TxB_SeriesSearch.Text.Contains('"')  ||
-                TxB_SeriesSearch.Text.Contains('\\') ||
-                TxB_SeriesSearch.Text.Contains('<')  ||
-                TxB_SeriesSearch.Text.Contains('>')  ||
-                TxB_SeriesSearch.Text.Contains('&'))
+            string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
+            if (TxB_SeriesSearch.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
             {
-                TxB_SeriesSearch.Text = RemoveInvalidChars(TxB_SeriesSearch.Text);
+                TxB_SeriesSearch.Text = new string(TxB_SeriesSearch.Text
+                    .Where(c => !invalidChars.Contains(c)).ToArray());
             }
         }
 
         private void TxB_FileExtension_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (TxB_FileExtension.Text.Contains(';')  ||
-                TxB_FileExtension.Text.Contains('\'') ||
-                TxB_FileExtension.Text.Contains('"')  ||
-                TxB_FileExtension.Text.Contains('\\') ||
-                TxB_FileExtension.Text.Contains('<')  ||
-                TxB_FileExtension.Text.Contains('>')  ||
-                TxB_FileExtension.Text.Contains('&'))
+            string invalidChars = new string(Path.GetInvalidPathChars()) + ";\'\"<>\\&";
+            if (TxB_FileExtension.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
             {
-                TxB_FileExtension.Text = RemoveInvalidChars(TxB_FileExtension.Text);
+                TxB_FileExtension.Text = new string(TxB_FileExtension.Text
+                    .Where(c => !invalidChars.Contains(c)).ToArray());
             }
+        }
 
+        private void TxB_NewFileNamePattern_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
+            if (TxB_NewFileNamePattern.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
+            {
+                TxB_NewFileNamePattern.Text = new string(TxB_NewFileNamePattern.Text
+                    .Where(c => !invalidChars.Contains(c)).ToArray());
+            }
         }
 
         #endregion Events()

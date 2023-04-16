@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Windows;
 
-namespace EPRenamer
+namespace Helion
 {
     internal class FileNameHandler
     {
@@ -35,9 +35,9 @@ namespace EPRenamer
 
         #region Public()
 
-        public static List<string> FileNamePreview(string showTitel, string seasonNr, string fileExtension)
+        public static List<string[]> DataGridPreview(string showTitel, string seasonNr, string fileExtension)
         {
-            return new FileNameHandler(showTitel, seasonNr, fileExtension).GetFileNamePreview();
+            return new FileNameHandler(showTitel, seasonNr, fileExtension).GetDataGridPreview();
         }
 
         public static void RenameFilesWithList(string showTitel, string seasonNr, string fileExtension)
@@ -56,13 +56,15 @@ namespace EPRenamer
                        .ToArray();
         }
 
-        private List<string> GetFileNamePreview()
+        private List<string[]> GetDataGridPreview()
         {
             // Initialize the result list
-            List<string> result = new();
+            List<string[]> result = new();
 
             // Read the episode names from the text file
             string[] episodeNames = File.ReadAllLines(_PathToListTXT);
+
+            MainWindow mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
 
             // Get the files in the search directory
             DirectoryInfo d = new(_AppDir);
@@ -80,11 +82,23 @@ namespace EPRenamer
                 // Get the formatted episode number
                 string episodeNumber = (i + 1 < 10) ? "0" + Convert.ToString(i + 1) : Convert.ToString(i + 1);
 
-                // Format the new file name
-                string newFileName = _ShowTitel + " S" + _SeasonNr + " E" + episodeNumber + " - " + episodeNames[i] + _FileExtension;
+                try
+                {
+                    // Generate the new file name based on the tag pattern in the text box
+                    string newFileName = mainWindow.GetNewFileNamePattern()
+                        .Replace("{Titel}", _ShowTitel)
+                        .Replace("{SNr}", " S" + _SeasonNr)
+                        .Replace("{ENr}", "E" + episodeNumber)
+                        .Replace("{EPName}", episodeNames[i])
+                        + _FileExtension;
 
-                // Add the old and new file names to the result list
-                result.Add($"{filteredStrings[i]} => {newFileName}");
+                    // Add the old and new file names to the result list
+                    result.Add(new string[] { filteredStrings[i], "    ==>    ", newFileName });
+                }
+                catch (FormatException e)
+                {
+                    MessageBox.Show(e.Message);
+                }
             }
 
             return result;
@@ -94,6 +108,8 @@ namespace EPRenamer
         {
             // Read the episode names from the text file
             string[] episodeNames = File.ReadAllLines(_PathToListTXT);
+
+            MainWindow mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
 
             // Get the files in the search directory
             DirectoryInfo d = new(_AppDir);
@@ -113,10 +129,37 @@ namespace EPRenamer
 
                 try
                 {
+                    // Generate the new file name based on the tag pattern in the text box
+                    string newName = mainWindow.GetNewFileNamePattern()
+                        .Replace("{Titel}", _ShowTitel)
+                        .Replace("{SNr}", " S" + _SeasonNr)
+                        .Replace("{ENr}", "E" + episodesNumber)
+                        .Replace("{EPName}", episodeNames[i])
+                        + _FileExtension;
+
                     // Rename the file
                     string oldName = _AppDir + filteredStrings[i];
-                    string newName = _AppDir + filteredStrings[i].Replace(filteredStrings[i], _ShowTitel + " S" + _SeasonNr + " E" + episodesNumber + " - " + episodeNames[i] + _FileExtension);
-                    File.Move(oldName, newName);
+                    string newFilePath = Path.Combine(_AppDir, newName);
+
+                    // Check if the new file name already exists, and rename to a new unique name if it does
+                    if (File.Exists(newFilePath))
+                    {
+                        int j = 1;
+                        while (File.Exists(newFilePath))
+                        {
+                            newName = mainWindow.GetNewFileNamePattern()
+                                .Replace("{Titel}", _ShowTitel)
+                                .Replace("{Nr}", _SeasonNr)
+                                .Replace("{ENr}", "E" + episodesNumber)
+                                .Replace("{EPName}", episodeNames[i])
+                                + "_" + j.ToString() + _FileExtension;
+
+                            newFilePath = Path.Combine(_AppDir, newName);
+                            j++;
+                        }
+                    }
+
+                    File.Move(oldName, newFilePath);
                 }
                 catch (FormatException e)
                 {
