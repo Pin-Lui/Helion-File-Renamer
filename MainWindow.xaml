@@ -6,6 +6,7 @@
         mc:Ignorable="d"
         MaxHeight="220" MinHeight="220" 
         Width="400"
+        Title="Using Data from epguides.com"
         Style="{DynamicResource CustomWindowStyle}" 
         ResizeMode="CanResize">
 
@@ -76,7 +77,8 @@
                  FontSize="14"
                  TextChanged="TxB_SeriesSearch_TextChanged"
                  FontFamily="Poppins" 
-                 TextAlignment="Left"/>
+                 TextAlignment="Left"
+                 Padding="3,0,0,0"/>
 
         <TextBox x:Name="TxB_FileExtension" 
                  HorizontalAlignment="Left" 
@@ -84,12 +86,13 @@
                  TextWrapping="Wrap" 
                  Text="mkv"
                  MaxLength="3"
-                 VerticalAlignment="Top" 
                  Width="37"
                  Height="23" 
                  FontSize="14"
                  TextChanged="TxB_FileExtension_TextChanged"
-                 FontFamily="Poppins"/>
+                 FontFamily="Poppins" 
+                 TextAlignment="Center"
+                 VerticalAlignment="Top"/>
 
         <TextBox x:Name="TxB_NewFileNamePattern" 
                  Margin="5,125,0,0" 
@@ -104,7 +107,6 @@
 
         <Label x:Name="Lbl_Cout"
                Margin="47,92,2,0" 
-               Foreground="{DynamicResource LabelDefaultForeground}"
                VerticalAlignment="Top"
                MouseDoubleClick="Lbl_Cout_MouseDoubleClick"
                Content="Test"
@@ -119,7 +121,7 @@
                      Height="14" 
                      Margin="5,155,-2,0" 
                      VerticalAlignment="Top"
-                     Foreground="Purple"/>
+                     Foreground="MediumPurple"/>
 
         <Rectangle 
                    Margin="47,94,-2,0" 

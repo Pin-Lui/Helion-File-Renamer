@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace Helion
 {
@@ -59,11 +58,17 @@ namespace Helion
 
         public static void Cout(string text)
         {
-            _GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() => _GUI_MainWindow.Lbl_Cout.Content = text));
+            // Access the Lbl_Cout label from the GUI_MainWindow on the main thread using Dispatcher.BeginInvoke
+            _GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Set the Content property of Lbl_Cout to the given text string
+                _GUI_MainWindow.Lbl_Cout.Content = text;
+            }));
         }
 
         public string GetNewFileNamePattern()
         {
+            // Return the text from the textbox.
             return TxB_NewFileNamePattern.Text;
         }
 
@@ -86,7 +91,10 @@ namespace Helion
             // Check if the user has entered a valid show title
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || TxB_SeriesSearch.Text.Equals(TutMsg))
             {
+                // Display an error message
                 Cout("Input a Show Titel");
+
+                // Enable the GUI elements and return
                 GUIStatus(true);
                 return;
             }
@@ -102,6 +110,7 @@ namespace Helion
                 // Check if the file exists and is not empty
                 if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
                 {
+                    // Enable the GUI elements and return
                     GUIStatus(true);
                     return;
                 }
@@ -125,6 +134,7 @@ namespace Helion
                 // If no matches were found, activate the GUI and return
                 if (CmB_SelectShow.Items.Count == 0)
                 {
+                    // Enable the GUI elements and return
                     GUIStatus(true);
                     return;
                 }
@@ -134,29 +144,30 @@ namespace Helion
 
                 // Clean up any unnecessary resources
                 CSVFileHandler.CleanCSVs();
-
             }
             catch (Exception ex)
             {
+                // Display any exceptions thrown
                 MessageBox.Show(ex.Message);
             }
 
+            // Enable the GUI elements
             GUIStatus(true);
         }
 
         private async void Btn_SelectShow_Click(object sender, RoutedEventArgs e)
         {
-            // Deactivate the GUI
+            // Deactivate the GUI while processing
             GUIStatus(false);
 
-            // Clear the CmB_SelectSeason items and text if they are not null or whitespace
+            // Clear season dropdown list if a show has been selected
             if (!string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
             {
                 CmB_SelectSeason.Items.Clear();
                 CmB_SelectSeason.Text = "";
             }
 
-            // If CmB_SelectShow text is null or whitespace, display error message and activate the GUI
+            // If no show is selected, display an error message and reactivate GUI
             if (string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
             {
                 Cout(RenameSTitelErrorMsg);
@@ -166,10 +177,10 @@ namespace Helion
 
             try
             {
-                // Download the AllShow.txt file and save it as a CSV
+                // Download the list of all shows and save as a CSV file
                 await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
 
-                // If the CSV file doesn't exist, activate the GUI and return
+                // If the CSV file doesn't exist, reactivate GUI and return
                 if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
                 {
                     GUIStatus(true);
@@ -182,7 +193,7 @@ namespace Helion
                 // Download the episode CSV file and save it
                 await DownloadWebFile(UrlToEpisodeCSV, _PathToListCSV);
 
-                // If the episode CSV file doesn't exist, activate the GUI and return
+                // If the episode CSV file doesn't exist, reactivate GUI and return
                 if (!CSVFileHandler.CheckforFiles(_PathToListCSV))
                 {
                     GUIStatus(true);
@@ -192,14 +203,14 @@ namespace Helion
                 // Get the number of seasons for the selected show
                 int seasonSize = CSVFileHandler.GetSeasonSize(CmB_SelectShow.Text);
 
-                // If there are no seasons, activate the GUI and return
+                // If there are no seasons, reactivate GUI and return
                 if (seasonSize == 0)
                 {
                     GUIStatus(true);
                     return;
                 }
 
-                // Use a for loop to add the seasons to the CmB_SelectSeason items
+                // Use a loop to add the seasons to the CmB_SelectSeason dropdown list
                 // Use the ternary operator to format the season names correctly
                 for (int i = 0; i < seasonSize; i++)
                 {
@@ -209,20 +220,24 @@ namespace Helion
                 // Use the ternary operator to display the appropriate message
                 Cout(seasonSize == 1 ? "Found " + seasonSize + " Season!" : "Found " + seasonSize + " Seasons!");
 
+                // If there are no seasons in the dropdown list, reactivate GUI and return
                 if (CmB_SelectSeason.Items.Count == 0)
                 {
                     GUIStatus(true);
                     return;
                 }
 
+                // Select the first season in the dropdown list and clean up CSV files
                 CmB_SelectSeason.SelectedIndex = 0;
                 CSVFileHandler.CleanCSVs();
             }
             catch (Exception ex)
             {
+                // If an exception occurs, show an error message
                 MessageBox.Show(ex.Message);
             }
 
+            // Reactivate GUI
             GUIStatus(true);
         }
 
@@ -293,35 +308,35 @@ namespace Helion
 
         private void Btn_RenameFilesWithList_Click(object sender, RoutedEventArgs e)
         {
-            //Dectivate GUI elements
+            // Deactivate GUI elements
             GUIStatus(false);
 
-            //check if the series name and season number have been entered by the user
+            // Check if the series name and season number have been entered by the user
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
             {
                 GUIStatus(true);
-                //output error message if series name or season number is missing
+                // Output error message if series name or season number is missing
                 Cout(RenameSTitelErrorMsg);
                 return;
             }
 
-            //Check if list file exists
+            // Check if list file exists
             if (!CSVFileHandler.CheckforFiles(_PathToListTXT))
             {
                 GUIStatus(true);
-                //output error message if list file is missing
+                // Output error message if list file is missing
                 Cout(NoListFoundErrorMsg);
                 return;
             }
 
-            //calculate the season number in the format "S01" or "S02" etc.
+            // Calculate the season number in the format "S01" or "S02" etc.
             int sNr = CmB_SelectSeason.SelectedIndex + 1;
             string sNumber = sNr <= 9 ? "0" + Convert.ToString(sNr) : Convert.ToString(sNr);
 
-            //create a preview of the new file names using the series name, season number, and file extension
+            // Create a preview of the new file names using the series name, season number, and file extension
             List<string[]> fileName = FileNameHandler.DataGridPreview(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
 
-            //check if there are any files that match the search criteria
+            // Check if there are any files that match the search criteria
             if (fileName.Count == 0)
             {
                 Cout(NoFilesFoundMsg);
@@ -341,15 +356,18 @@ namespace Helion
                 return;
             }
 
+            // Set the item source for the DataGrid
             gridViewWindow.DataGrid.ItemsSource = fileName;
 
             // Create and define the columns for the DataGrid
-            DataGridTextColumn oldNameColumn = new DataGridTextColumn();
-            oldNameColumn.Header = "Old Name";
-            oldNameColumn.Binding = new Binding("[0]"); // Bind to the first element of the array
-            oldNameColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star); // Set width to fill available space
-            oldNameColumn.FontSize = 13;
-            oldNameColumn.FontFamily = new FontFamily("Poppins");
+            DataGridTextColumn oldNameColumn = new DataGridTextColumn
+            {
+                Header = "Old Name",
+                Binding = new Binding("[0]"), // Bind to the first element of the array
+                Width = new DataGridLength(1, DataGridLengthUnitType.Star), // Set width to fill available space
+                FontSize = 13,
+                FontFamily = new FontFamily("Poppins")
+            };
 
             DataGridTextColumn middleColumn = new DataGridTextColumn();
             middleColumn.Header = "Separator";
@@ -369,23 +387,27 @@ namespace Helion
             gridViewWindow.DataGrid.Columns.Add(middleColumn);
             gridViewWindow.DataGrid.Columns.Add(newNameColumn);
 
+            // Hide the column headers
             gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
 
-            // Open the Window
+            // Open the GridViewWindow as a modal dialog
             bool? result = gridViewWindowResult.ShowDialog();
 
-            // Check the dialog result
+            // Check the dialog result and proceed with file renaming if user clicked "OK"
             if (result == true)
             {
                 FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
+                // Output success message after renaming files
                 Cout(RenameSuccessMsg);
             }
+            // Otherwise, restore GUI elements and return
             else
             {
                 GUIStatus(true);
                 return;
             }
 
+            // Restore GUI elements after renaming files
             GUIStatus(true);
         }
 
@@ -446,8 +468,12 @@ namespace Helion
 
         private string GetFileExtension()
         {
+            // Define a regular expression pattern to match strings containing only letters and numbers
             string pattern = @"^[a-zA-Z0-9]+$";
+
             string result;
+
+            // Check if the length of the TxB_FileExtension.Text is 3 and matches the pattern
             if (TxB_FileExtension.Text.Length == 3 && Regex.IsMatch(TxB_FileExtension.Text, pattern))
             {
                 // TxB_FileExtension.Text is 3 characters long and contains only letters and numbers
@@ -456,12 +482,13 @@ namespace Helion
             else
             {
                 // TxB_FileExtension.Text is not 3 characters long or contains characters that are not letters or numbers
+                // Set TxB_FileExtension.Text to the default FileExtension value
                 TxB_FileExtension.Text = FileExtension;
                 result = "." + FileExtension;
             }
 
+            // Return the result
             return result;
-
         }
 
         #endregion Private()
@@ -470,28 +497,35 @@ namespace Helion
 
         private void TxB_SeriesSearch_GotMouseCapture(object sender, MouseEventArgs e)
         {
+            // Check if the TxB_SeriesSearch textbox contains text and if it equals the tutorial message
             if (!string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) && TxB_SeriesSearch.Text.Equals(TutMsg))
             {
+                // Clear the contents of the TxB_SeriesSearch textbox
                 TxB_SeriesSearch.Text = "";
-                //TxB_SeriesSearch.Foreground = new SolidColorBrush(Colors.Black);
             }
         }
 
         private void CmB_SelectShow_DropDownClosed(object sender, EventArgs e)
         {
+            // Set the text of the TxB_SeriesSearch textbox to the selected item in the CmB_SelectShow ComboBox
             TxB_SeriesSearch.Text = CmB_SelectShow.Text;
         }
 
         private void Lbl_Cout_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            // Open a new explorer window and navigate to the application directory
             Process.Start("explorer.exe", _AppDir);
         }
-
+        
         private void TxB_SeriesSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // Get the list of invalid filename characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
+
+            // Check if the TxB_SeriesSearch textbox contains any invalid characters
             if (TxB_SeriesSearch.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
             {
+                // Remove any invalid characters from the TxB_SeriesSearch textbox
                 TxB_SeriesSearch.Text = new string(TxB_SeriesSearch.Text
                     .Where(c => !invalidChars.Contains(c)).ToArray());
             }
@@ -499,9 +533,13 @@ namespace Helion
 
         private void TxB_FileExtension_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // Get the list of invalid path characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidPathChars()) + ";\'\"<>\\&";
+
+            // Check if the TxB_FileExtension textbox contains any invalid characters
             if (TxB_FileExtension.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
             {
+                // Remove any invalid characters from the TxB_FileExtension textbox
                 TxB_FileExtension.Text = new string(TxB_FileExtension.Text
                     .Where(c => !invalidChars.Contains(c)).ToArray());
             }
@@ -509,9 +547,13 @@ namespace Helion
 
         private void TxB_NewFileNamePattern_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // Get the list of invalid filename characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
+
+            // Check if the TxB_NewFileNamePattern textbox contains any invalid characters
             if (TxB_NewFileNamePattern.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
             {
+                // Remove any invalid characters from the TxB_NewFileNamePattern textbox
                 TxB_NewFileNamePattern.Text = new string(TxB_NewFileNamePattern.Text
                     .Where(c => !invalidChars.Contains(c)).ToArray());
             }
@@ -520,37 +562,4 @@ namespace Helion
         #endregion Events()
 
     }
-
-    internal class CSVAllShows
-    {
-        #region Felder
-        public string Titel { get; set; }
-        public string Directory { get; set; }
-        public string Tvrage { get; set; }
-        public string TVmaze { get; set; }
-        public string StartDate { get; set; }
-        public string EndDate { get; set; }
-        public string NumberOfEpisodes { get; set; }
-        public string RunTime { get; set; }
-        public string Network { get; set; }
-        public string Country { get; set; }
-        public string Onhiatus { get; set; }
-        public string Onhiatusdesc { get; set; }
-
-        #endregion Felder
-    }
-
-    internal class CSVEpisodes
-    {
-        #region Felder
-        public string EPNumber { get; set; }
-        public string Season { get; set; }
-        public string Episode { get; set; }
-        public string Airdate { get; set; }
-        public string Title { get; set; }
-        public string TvmazeLink { get; set; }
-
-        #endregion Felder
-    }
-
 }

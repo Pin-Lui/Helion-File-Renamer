@@ -40,16 +40,6 @@ namespace Helion
             await DownloadFileFromHttpResponseMessage(response);
         }
 
-        //public async Task StartDownload(CancellationToken cancellationToken)
-        //{
-        //    // Send a GET request to the download URL with a cancellation token
-        //    using (var response = await GetAsync(_DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
-        //    {
-        //        // Download the file from the response
-        //        await DownloadFileFromHttpResponseMessage(response);
-        //    }
-        //}
-
         #endregion Public()
 
         #region Private()

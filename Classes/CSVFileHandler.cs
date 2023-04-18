@@ -429,11 +429,13 @@ namespace Helion
 
             // Open a stream for writing to the file
             using var stream = File.OpenWrite(path);
+
             // Set the length of the stream to 0
             stream.SetLength(0);
 
             // Create a StreamWriter to write to the stream
             using var writer = new StreamWriter(stream);
+
             // Write all the lines to the stream
             writer.Write(string.Join(Environment.NewLine, lines));
         }
@@ -441,4 +443,37 @@ namespace Helion
         #endregion Private()
 
     }
+
+    internal class CSVAllShows
+    {
+        #region Felder
+        public string Titel { get; set; }
+        public string Directory { get; set; }
+        public string Tvrage { get; set; }
+        public string TVmaze { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public string NumberOfEpisodes { get; set; }
+        public string RunTime { get; set; }
+        public string Network { get; set; }
+        public string Country { get; set; }
+        public string Onhiatus { get; set; }
+        public string Onhiatusdesc { get; set; }
+
+        #endregion Felder
+    }
+
+    internal class CSVEpisodes
+    {
+        #region Felder
+        public string EPNumber { get; set; }
+        public string Season { get; set; }
+        public string Episode { get; set; }
+        public string Airdate { get; set; }
+        public string Title { get; set; }
+        public string TvmazeLink { get; set; }
+
+        #endregion Felder
+    }
+
 }
