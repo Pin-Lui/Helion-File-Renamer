@@ -109,7 +109,6 @@
                Margin="47,92,2,0" 
                VerticalAlignment="Top"
                MouseDoubleClick="Lbl_Cout_MouseDoubleClick"
-               Content="Test"
                Height="31" 
                FontSize="14"
                VerticalContentAlignment="Center" 
