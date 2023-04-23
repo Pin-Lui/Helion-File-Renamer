@@ -32,7 +32,7 @@ namespace Helion
         private readonly string _PathToListCSV;
         private readonly string _PathToAllShowCSV;
 
-        private static MainWindow _GUI_MainWindow;
+        private static MainWindow GUI_MainWindow;
 
         #endregion Felder
 
@@ -41,7 +41,7 @@ namespace Helion
         public MainWindow()
         {
             InitializeComponent();
-            _GUI_MainWindow = this;
+            GUI_MainWindow = this;
             _AppDir = (AppDomain.CurrentDomain.BaseDirectory);
             _PathToListTXT = (_AppDir + "\\list.txt");
             _PathToListCSV = (_AppDir + "\\list.csv");
@@ -59,10 +59,10 @@ namespace Helion
         public static void Cout(string text)
         {
             // Access the Lbl_Cout label from the GUI_MainWindow on the main thread using Dispatcher.BeginInvoke
-            _GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() =>
+            GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() =>
             {
                 // Set the Content property of Lbl_Cout to the given text string
-                _GUI_MainWindow.Lbl_Cout.Content = text;
+                GUI_MainWindow.Lbl_Cout.Content = text;
             }));
         }
 
@@ -92,7 +92,7 @@ namespace Helion
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || TxB_SeriesSearch.Text.Equals(TutMsg))
             {
                 // Display an error message
-                Cout("Input a Show Titel");
+                Cout(RenameSTitelErrorMsg);
 
                 // Enable the GUI elements and return
                 GUIStatus(true);
@@ -304,6 +304,8 @@ namespace Helion
 
             // Activate buttons
             GUIStatus(true);
+
+            OpenTheList();
         }
 
         private void Btn_RenameFilesWithList_Click(object sender, RoutedEventArgs e)
@@ -314,8 +316,8 @@ namespace Helion
             // Check if the series name and season number have been entered by the user
             if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
             {
-                GUIStatus(true);
                 // Output error message if series name or season number is missing
+                GUIStatus(true);
                 Cout(RenameSTitelErrorMsg);
                 return;
             }
@@ -323,8 +325,8 @@ namespace Helion
             // Check if list file exists
             if (!CSVFileHandler.CheckforFiles(_PathToListTXT))
             {
-                GUIStatus(true);
                 // Output error message if list file is missing
+                GUIStatus(true);
                 Cout(NoListFoundErrorMsg);
                 return;
             }
@@ -360,7 +362,7 @@ namespace Helion
             gridViewWindow.DataGrid.ItemsSource = fileName;
 
             // Create and define the columns for the DataGrid
-            DataGridTextColumn oldNameColumn = new DataGridTextColumn
+            DataGridTextColumn oldNameColumn = new()
             {
                 Header = "Old Name",
                 Binding = new Binding("[0]"), // Bind to the first element of the array
@@ -369,18 +371,22 @@ namespace Helion
                 FontFamily = new FontFamily("Poppins")
             };
 
-            DataGridTextColumn middleColumn = new DataGridTextColumn();
-            middleColumn.Header = "Separator";
-            middleColumn.Binding = new Binding("[1]"); // Bind to the second element of the array
-            middleColumn.FontSize = 13;
-            middleColumn.FontFamily = new FontFamily("Poppins");
+            DataGridTextColumn middleColumn = new()
+            {
+                Header = "Separator",
+                Binding = new Binding("[1]"), // Bind to the second element of the array
+                FontSize = 13,
+                FontFamily = new FontFamily("Poppins")
+            };
 
-            DataGridTextColumn newNameColumn = new DataGridTextColumn();
-            newNameColumn.Header = "New Name";
-            newNameColumn.Binding = new Binding("[2]"); // Bind to the third element of the array
-            newNameColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star); // Set width to fill available space
-            newNameColumn.FontSize = 13;
-            newNameColumn.FontFamily = new FontFamily("Poppins");
+            DataGridTextColumn newNameColumn = new()
+            {
+                Header = "New Name",
+                Binding = new Binding("[2]"), // Bind to the third element of the array
+                Width = new DataGridLength(1, DataGridLengthUnitType.Star), // Set width to fill available space
+                FontSize = 13,
+                FontFamily = new FontFamily("Poppins")
+            };
 
             // Add the columns to the DataGrid
             gridViewWindow.DataGrid.Columns.Add(oldNameColumn);
@@ -394,18 +400,17 @@ namespace Helion
             bool? result = gridViewWindowResult.ShowDialog();
 
             // Check the dialog result and proceed with file renaming if user clicked "OK"
-            if (result == true)
-            {
-                FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
-                // Output success message after renaming files
-                Cout(RenameSuccessMsg);
-            }
-            // Otherwise, restore GUI elements and return
-            else
+            if (result != true)
             {
                 GUIStatus(true);
                 return;
             }
+
+            // Rename the Files
+            FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
+            
+            // Output success message after renaming files
+            Cout(RenameSuccessMsg);
 
             // Restore GUI elements after renaming files
             GUIStatus(true);
@@ -415,19 +420,59 @@ namespace Helion
 
         #region Private()
 
+        private void OpenTheList()
+        {
+            try
+            {
+                // Open the text file with the default system text editor
+                new Process
+                {
+                    StartInfo = new ProcessStartInfo(_PathToListTXT)
+                    {
+                        UseShellExecute = true
+                    }
+                }.Start();
+            }
+            catch (ArgumentNullException)
+            {
+                // Thrown when the file path is null
+                MessageBox.Show("The file path is null.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Thrown when the file does not exist or there is no default editor for the file type
+                try
+                {
+                    // Open the text file with Notepad
+                    Process.Start("notepad.exe", _PathToListTXT);
+                }
+                catch (Exception)
+                {
+                    // Thrown for any other exception
+                    MessageBox.Show("Could not open the file with the default text editor or Notepad.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception)
+            {
+                // Thrown for any other exception
+                MessageBox.Show("Could not open the file with the default text editor.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+        }
+
         private static void SetProgressBarValue(int progressPercentage, long _1, long _2)
         {
             // Output the current progress percentage
             Cout(Convert.ToString(progressPercentage) + "%");
 
             // Update the progress bar value
-            _GUI_MainWindow.PgB_Main.Value = progressPercentage;
+            GUI_MainWindow.PgB_Main.Value = progressPercentage;
 
             // Check if the progress has reached 100%
-            if (_GUI_MainWindow.PgB_Main.Value == 100)
+            if (GUI_MainWindow.PgB_Main.Value == 100)
             {
                 // Reset the progress bar value
-                _GUI_MainWindow.PgB_Main.Value = 0;
+                GUI_MainWindow.PgB_Main.Value = 0;
             }
         }
 
@@ -452,10 +497,10 @@ namespace Helion
             // Create a list of buttons that need to have their state changed
             List<Button> buttons = new()
             {
-                _GUI_MainWindow.Btn_Search,
-                _GUI_MainWindow.Btn_SelectShow,
-                _GUI_MainWindow.Btn_GenSeasonEPNameList,
-                _GUI_MainWindow.Btn_RenameFilesWithList
+                GUI_MainWindow.Btn_Search,
+                GUI_MainWindow.Btn_SelectShow,
+                GUI_MainWindow.Btn_GenSeasonEPNameList,
+                GUI_MainWindow.Btn_RenameFilesWithList
             };
 
             // Iterate through the list of buttons
@@ -513,10 +558,25 @@ namespace Helion
 
         private void Lbl_Cout_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Open a new explorer window and navigate to the application directory
-            Process.Start("explorer.exe", _AppDir);
+            try
+            {
+                // Open a new explorer window and navigate to the application directory
+                Process.Start("explorer.exe", _AppDir);
+            }
+            catch (InvalidOperationException)
+            {
+                // Thrown when the operating system is not Windows or there is no file manager available
+                MessageBox.Show("Could not start explorer.exe. The operating system is not Windows or there is no file manager available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception)
+            {
+                // Thrown for any other exception
+                MessageBox.Show("Could not start explorer.exe.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+
         }
-        
+
         private void TxB_SeriesSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
             // Get the list of invalid filename characters and add additional characters that are not allowed

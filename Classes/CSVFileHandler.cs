@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Helion
 {
@@ -60,13 +61,14 @@ namespace Helion
 
         public static void Cout(string text)
         {
-            if (string.IsNullOrEmpty(text)) throw new ArgumentNullException(nameof(text));
+            if (string.IsNullOrEmpty(text)) throw new ArgumentNullException(nameof(text),"Empty String");
             MainWindow.Cout(text);
         }
 
         public static bool CheckforFiles(string fileUrl)
         {
             // Check if the file exists
+            if (string.IsNullOrEmpty(fileUrl)) throw new ArgumentNullException(nameof(fileUrl),"File Url");
             return File.Exists(fileUrl);
         }
 

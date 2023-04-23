@@ -23,7 +23,7 @@
                 Width="80"/>
 
         <Button x:Name="Btn_GenSeasonEPNameList"
-                Content="Get Season EP Names" 
+                Content="Get Season EP List" 
                 HorizontalAlignment="Right" 
                 Margin="0,68,83,0" 
                 VerticalAlignment="Top" 

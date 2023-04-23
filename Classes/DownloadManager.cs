@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Net.Http;
+using System;
 
 namespace Helion
 {
@@ -48,14 +49,15 @@ namespace Helion
         {
             // Ensure that the request was successful
             response.EnsureSuccessStatusCode();
+
             // Get the total bytes of the file from the response headers
             long? totalBytes = response.Content.Headers.ContentLength;
+
             // Get the content stream from the response
-            using (var contentStream = await response.Content.ReadAsStreamAsync())
-            {
-                // Process the content stream to download the file
-                await ProcessContentStream(totalBytes, contentStream);
-            }
+            using var contentStream = await response.Content.ReadAsStreamAsync();
+
+            // Process the content stream to download the file
+            await ProcessContentStream(totalBytes, contentStream);
         }
 
         private async Task ProcessContentStream(long? totalDownloadSize, Stream contentStream)
@@ -71,7 +73,7 @@ namespace Helion
                 // Read data from the stream and write it to the file
                 do
                 {
-                    int bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length);
+                    int bytesRead = await contentStream.ReadAsync(buffer);
                     if (bytesRead == 0)
                     {
                         isMoreToRead = false;
