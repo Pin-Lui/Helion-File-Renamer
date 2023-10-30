@@ -1,11 +1,12 @@
 ﻿using System.Diagnostics;
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using static System.Net.Mime.MediaTypeNames;
+using Application = System.Windows.Application;
 
 namespace Helion
 {
@@ -30,7 +31,7 @@ namespace Helion
         private readonly string _AppDir;
         private readonly string _PathToListTXT;
         private readonly string _PathToListCSV;
-        private readonly string _PathToAllShowCSV;
+        private static readonly string _PathToAllShowCSV = AppDomain.CurrentDomain.BaseDirectory + "\\allshows.csv";
 
         private static MainWindow GUI_MainWindow;
 
@@ -45,7 +46,7 @@ namespace Helion
             _AppDir = (AppDomain.CurrentDomain.BaseDirectory);
             _PathToListTXT = (_AppDir + "\\list.txt");
             _PathToListCSV = (_AppDir + "\\list.csv");
-            _PathToAllShowCSV = (_AppDir + "\\allshows.csv");
+            //_PathToAllShowCSV = (_AppDir + "\\allshows.csv");
             TxB_SeriesSearch.Text = TutMsg;
             TxB_FileExtension.Text = FileExtension;
             TxB_NewFileNamePattern.Text = DefaultFileNamePattern;
@@ -68,8 +69,20 @@ namespace Helion
 
         public string GetNewFileNamePattern()
         {
+            string pattern = TxB_NewFileNamePattern.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                pattern = DefaultFileNamePattern;
+            }
+
             // Return the text from the textbox.
-            return TxB_NewFileNamePattern.Text;
+            return pattern;
+        }
+
+        public static async void DownloadCSV()
+        {
+            await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
         }
 
         #endregion Public()
@@ -336,7 +349,7 @@ namespace Helion
             string sNumber = sNr <= 9 ? "0" + Convert.ToString(sNr) : Convert.ToString(sNr);
 
             // Create a preview of the new file names using the series name, season number, and file extension
-            List<string[]> fileName = FileNameHandler.DataGridPreview(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
+            List<string[]> fileName = FileNameHandler.DataGridPreview(TxB_SeriesSearch.Text.TrimEnd(), sNumber, GetFileExtension());
 
             // Check if there are any files that match the search criteria
             if (fileName.Count == 0)
@@ -407,7 +420,7 @@ namespace Helion
             }
 
             // Rename the Files
-            FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text, sNumber, GetFileExtension());
+            FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text.TrimEnd(), sNumber, GetFileExtension());
             
             // Output success message after renaming files
             Cout(RenameSuccessMsg);
@@ -616,6 +629,14 @@ namespace Helion
                 // Remove any invalid characters from the TxB_NewFileNamePattern textbox
                 TxB_NewFileNamePattern.Text = new string(TxB_NewFileNamePattern.Text
                     .Where(c => !invalidChars.Contains(c)).ToArray());
+            }
+        }
+
+        private void TxB_NewFileNamePattern_LostKeyFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TxB_NewFileNamePattern.Text))
+            {
+                TxB_NewFileNamePattern.Text = DefaultFileNamePattern;
             }
         }
 

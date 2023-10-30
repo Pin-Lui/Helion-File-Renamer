@@ -1,9 +1,9 @@
 ﻿using CsvHelper;
 using System.Globalization;
-using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Windows;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Helion
 {
@@ -17,6 +17,7 @@ namespace Helion
         private readonly string _PathToListTXT;
         private readonly string _PathToListCSV;
         private readonly string _PathToAllShowCSV;
+        private const string PathAllShowtxt = "https://epguides.com/common/allshows.txt";
 
         #endregion Felder
 
@@ -100,6 +101,42 @@ namespace Helion
         public static string GetEpsiodeCsvUrls(string showTitel)
         {
             return new CSVFileHandler(showTitel).GetEpsiodeCsvUrl();
+        }
+
+        public static DateTime GetLastModified()
+        {
+            using HttpClient httpClient = new();
+                try
+                {
+                    using HttpRequestMessage request = new(HttpMethod.Head, PathAllShowtxt);
+                    using HttpResponseMessage response = httpClient.Send(request, HttpCompletionOption.ResponseHeadersRead);
+                    response.EnsureSuccessStatusCode();
+
+                    if (response.Content.Headers.TryGetValues("Last-Modified", out var values))
+                    {
+                        if (DateTime.TryParse(values.FirstOrDefault(), out DateTime lastModified))
+                        {
+                            return lastModified;
+                        }
+                    }
+
+                    // Handle case when "Last-Modified" header is not present or cannot be parsed
+                    MessageBox.Show("Warning: Unable to parse Last-Modified header.");
+                    return DateTime.MinValue;
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Handle HTTP request-related errors
+                    MessageBox.Show("Error occurred during HTTP request: " + ex.Message);
+                    return DateTime.MinValue;
+                }
+                catch (Exception ex)
+                {
+                    // Handle other unexpected errors
+                    MessageBox.Show("An unexpected error occurred: " + ex.Message);
+                    return DateTime.MinValue;
+                }
+
         }
 
         #endregion Public()

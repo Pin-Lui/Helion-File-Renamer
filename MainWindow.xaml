@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         MaxHeight="220" MinHeight="220" 
-        Width="400"
+        Width="600"
         Title="Using Data from epguides.com"
         Style="{DynamicResource CustomWindowStyle}" 
         ResizeMode="CanResize">
@@ -103,7 +103,8 @@
                  FontSize="16"
                  FontFamily="Poppins" 
                  TextAlignment="Center"
-                 TextChanged="TxB_NewFileNamePattern_TextChanged"/>
+                 TextChanged="TxB_NewFileNamePattern_TextChanged" 
+                 LostKeyboardFocus="TxB_NewFileNamePattern_LostKeyFocus"/>
 
         <Label x:Name="Lbl_Cout"
                Margin="47,92,2,0" 

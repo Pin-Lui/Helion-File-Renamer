@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Windows;
+﻿using System.Windows;
 
 namespace Helion
 {
@@ -87,7 +86,7 @@ namespace Helion
                     // Generate the new file name based on the tag pattern in the text box
                     string newFileName = mainWindow.GetNewFileNamePattern()
                         .Replace("{Titel}", _ShowTitel)
-                        .Replace("{SNr}", " S" + _SeasonNr)
+                        .Replace("{SNr}", "S" + _SeasonNr)
                         .Replace("{ENr}", "E" + episodeNumber)
                         .Replace("{EPName}", episodeNames[i])
                         + _FileExtension;
@@ -132,34 +131,15 @@ namespace Helion
                     // Generate the new file name based on the tag pattern in the text box
                     string newName = mainWindow.GetNewFileNamePattern()
                         .Replace("{Titel}", _ShowTitel)
-                        .Replace("{SNr}", " S" + _SeasonNr)
+                        .Replace("{SNr}", "S" + _SeasonNr)
                         .Replace("{ENr}", "E" + episodesNumber)
                         .Replace("{EPName}", episodeNames[i])
                         + _FileExtension;
 
-                    // Rename the file
+                    // Do the thing
                     string oldName = _AppDir + filteredStrings[i];
-                    string newFilePath = Path.Combine(_AppDir, newName);
-
-                    // Check if the new file name already exists, and rename to a new unique name if it does
-                    if (File.Exists(newFilePath))
-                    {
-                        int j = 1;
-                        while (File.Exists(newFilePath))
-                        {
-                            newName = mainWindow.GetNewFileNamePattern()
-                                .Replace("{Titel}", _ShowTitel)
-                                .Replace("{Nr}", _SeasonNr)
-                                .Replace("{ENr}", "E" + episodesNumber)
-                                .Replace("{EPName}", episodeNames[i])
-                                + "_" + j.ToString() + _FileExtension;
-
-                            newFilePath = Path.Combine(_AppDir, newName);
-                            j++;
-                        }
-                    }
-
-                    File.Move(oldName, newFilePath);
+                    string newFileName = Path.Combine(_AppDir, newName);
+                    File.Move(oldName, newFileName);
                 }
                 catch (FormatException e)
                 {

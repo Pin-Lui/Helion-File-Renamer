@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,29 +7,8 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Resources\walter-white32.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <SignAssembly>False</SignAssembly>
-    <IsPublishable>True</IsPublishable>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugType>none</DebugType>
   </PropertyGroup>
   
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>none</DebugType>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Classes\FlexibleMessageBox.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="EPRenamer.rar" />
-  </ItemGroup>
-
   <ItemGroup>
     <Content Include="Resources\walter-white32.ico" />
   </ItemGroup>
@@ -45,5 +24,9 @@
     <None Update="windowsdesktop-runtime-7.0.4-win-x86.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.IO" />
   </ItemGroup>
 </Project>
