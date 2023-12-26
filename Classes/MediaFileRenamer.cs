@@ -107,7 +107,7 @@ namespace Helion
                 string episodeNumber = (i + 1).ToString("D2"); // Correct episode numbering
                 string seasonNumberPadded = SeasonNumber.PadLeft(2, '0'); // Pad the season number with a leading zero if necessary
 
-                string newFileName = $"{mainWindow.RetrieveFileNamePattern().Replace("{Titel}", ShowTitle).Replace("{SNr}", "S" + seasonNumberPadded).Replace("{ENr}", "E" + episodeNumber).Replace("{EPName}", episodeNames[i])}{FileExtension}";
+                string newFileName = $"{mainWindow.RetrieveFileNamePattern().Replace("{ Titel }", ShowTitle).Replace("{ SeasonNumber }", "S" + seasonNumberPadded).Replace("{ EpisodeNumber }", "E" + episodeNumber).Replace("{ EpisodeName }", episodeNames[i])}{FileExtension}";
 
                 result.Add(new string[] { filteredStrings[i], "    ==>    ", newFileName });
             }
@@ -136,7 +136,7 @@ namespace Helion
                 string episodeNumber = (i + 1).ToString("D2"); // Correct episode numbering
                 string seasonNumberPadded = SeasonNumber.PadLeft(2, '0'); // Pad the season number with a leading zero if necessary
 
-                string newName = $"{mainWindow.RetrieveFileNamePattern().Replace("{Titel}", ShowTitle).Replace("{SNr}", "S" + seasonNumberPadded).Replace("{ENr}", "E" + episodeNumber).Replace("{EPName}", episodeNames[i])}{FileExtension}";
+                string newName = $"{mainWindow.RetrieveFileNamePattern().Replace("{ Titel }", ShowTitle).Replace("{ SeasonNumber }", "S" + seasonNumberPadded).Replace("{ EpisodeNumber }", "E" + episodeNumber).Replace("{ EpisodeName }", episodeNames[i])}{FileExtension}";
                 string oldName = Path.Combine(ApplicationDirectory, filteredStrings[i]);
                 string newFileName = Path.Combine(ApplicationDirectory, newName);
 
