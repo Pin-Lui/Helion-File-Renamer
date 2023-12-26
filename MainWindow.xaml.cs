@@ -5,8 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using static System.Net.Mime.MediaTypeNames;
-using Application = System.Windows.Application;
 
 namespace Helion
 {
@@ -28,12 +26,13 @@ namespace Helion
         private const string NoFilesFoundMsg = "No Files Found!";
         private const string PathAllShowtxt = "https://epguides.com/common/allshows.txt";
         private const string FileExtension = "mkv";
-        private readonly string _AppDir;
-        private readonly string _PathToListTXT;
-        private readonly string _PathToListCSV;
-        private static readonly string _PathToAllShowCSV = AppDomain.CurrentDomain.BaseDirectory + "\\allshows.csv";
-
+        private const string ExplorerErrorMessage = "Could not start explorer.exe. The operating system is not Windows or there is no file manager available.";
+        private const string GenericExplorerErrorMessage = "Could not start explorer.exe.";
         private static MainWindow GUI_MainWindow;
+        private static string AppDir => AppDomain.CurrentDomain.BaseDirectory;
+        private static string PathToListTxt => Path.Combine(AppDir, "list.txt");
+        private static string PathToListCsv => Path.Combine(AppDir, "list.csv");
+        private static string PathToAllShowCsv => Path.Combine(AppDir, "allshows.csv");
 
         #endregion Felder
 
@@ -43,31 +42,24 @@ namespace Helion
         {
             InitializeComponent();
             GUI_MainWindow = this;
-            _AppDir = (AppDomain.CurrentDomain.BaseDirectory);
-            _PathToListTXT = (_AppDir + "\\list.txt");
-            _PathToListCSV = (_AppDir + "\\list.csv");
-            //_PathToAllShowCSV = (_AppDir + "\\allshows.csv");
             TxB_SeriesSearch.Text = TutMsg;
             TxB_FileExtension.Text = FileExtension;
             TxB_NewFileNamePattern.Text = DefaultFileNamePattern;
-
         }
 
         #endregion Konstruktor
 
         #region Public()
 
-        public static void Cout(string text)
+        public static void DisplayMessage(string text)
         {
-            // Access the Lbl_Cout label from the GUI_MainWindow on the main thread using Dispatcher.BeginInvoke
             GUI_MainWindow.Lbl_Cout.Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Set the Content property of Lbl_Cout to the given text string
                 GUI_MainWindow.Lbl_Cout.Content = text;
             }));
         }
 
-        public string GetNewFileNamePattern()
+        public string RetrieveFileNamePattern()
         {
             string pattern = TxB_NewFileNamePattern.Text.Trim();
 
@@ -76,371 +68,259 @@ namespace Helion
                 pattern = DefaultFileNamePattern;
             }
 
-            // Return the text from the textbox.
             return pattern;
         }
 
-        public static async void DownloadCSV()
+        public static async void DownloadShowListCsv()
         {
-            await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
+            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
         }
 
         #endregion Public()
 
         #region Buttons
 
-        private async void Btn_Search_Click(object sender, RoutedEventArgs e)
+        private async void SelectShowButtonClick(object sender, RoutedEventArgs e)
         {
-            // Disable GUI elements
-            GUIStatus(false);
+            /// < summary >
+            /// Handles the click event for the 'Select Show' button. Downloads show lists, 
+            /// checks file existence, retrieves episode CSV URLs, and updates the GUI accordingly.
+            /// </summary>
 
-            // Clear the ComboBox for selecting a show and its text
-            if (!string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
+            UpdateGUIStatus(false);
+            ClearSeasonComboBoxIfShowSelected();
+
+            if (IsShowNotSelected())
             {
-                CmB_SelectShow.Items.Clear();
-                CmB_SelectShow.Text = "";
-            }
-
-            // Check if the user has entered a valid show title
-            if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || TxB_SeriesSearch.Text.Equals(TutMsg))
-            {
-                // Display an error message
-                Cout(RenameSTitelErrorMsg);
-
-                // Enable the GUI elements and return
-                GUIStatus(true);
+                DisplayMessage(RenameSTitelErrorMsg);
+                UpdateGUIStatus(true);
                 return;
             }
 
-            // Clear the ComboBox for selecting a season
+            try
+            {
+                if (!await ProcessShowFileDownload())
+                {
+                    UpdateGUIStatus(true);
+                    return;
+                }
+
+                int seasonSize = CsvFileManager.CalculateSeasonSize(CmB_SelectShow.Text);
+                if (seasonSize == 0)
+                {
+                    UpdateGUIStatus(true);
+                    return;
+                }
+
+                FillSeasonDropdown(seasonSize);
+                DisplayMessage(CreateSeasonsFoundMessage(seasonSize));
+
+                if (CmB_SelectSeason.Items.Count == 0)
+                {
+                    UpdateGUIStatus(true);
+                    return;
+                }
+
+                CmB_SelectSeason.SelectedIndex = 0;
+                CsvFileManager.CleanCsvFiles();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                UpdateGUIStatus(true);
+            }
+        }
+
+        private async void SearchButtonClick(object sender, RoutedEventArgs e)
+        {
+            /// <summary>
+            /// Handles the click event for the 'Search' button. Clears and updates the show selection
+            /// based on the search criteria, downloads required files, and updates the GUI.
+            /// </summary>
+
+            UpdateGUIStatus(false);
+            ClearShowComboBox();
+
+            if (IsShowSearchInvalid())
+            {
+                DisplayMessage(RenameSTitelErrorMsg);
+                UpdateGUIStatus(true);
+                return;
+            }
+
             CmB_SelectSeason.Items.Clear();
 
             try
             {
-                // Download the web file and save it as a CSV
-                await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
-
-                // Check if the file exists and is not empty
-                if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
+                if (!await ProcessShowSearchDownload())
                 {
-                    // Enable the GUI elements and return
-                    GUIStatus(true);
+                    UpdateGUIStatus(true);
                     return;
                 }
 
-                // Get list of shows from EPGuideDB
-                List<CSVAllShows> buffer = CSVFileHandler.GetEPGuideDB();
+                var results = RetrieveSearchResults();
+                FillShowDropdown(results);
+                DisplayMessage(CreateSearchResultsMessage(results.Count));
 
-                // Get list of shows that match the search text (case-insensitive)
-                List<CSVAllShows> results = buffer.Where(x => x.Titel.Contains(TxB_SeriesSearch.Text, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                // Add the title of each show to the CmB_SelectShow control
-                foreach (var item in results)
-                {
-                    CmB_SelectShow.Items.Add(item.Titel);
-                }
-
-                // Display a message with the number of matches found
-                int resultCount = results.Count;
-                Cout("Found " + resultCount + " match" + (resultCount == 1 ? "!" : "es!"));
-
-                // If no matches were found, activate the GUI and return
                 if (CmB_SelectShow.Items.Count == 0)
                 {
-                    // Enable the GUI elements and return
-                    GUIStatus(true);
+                    UpdateGUIStatus(true);
                     return;
                 }
 
-                // Select the first item in the CmB_SelectShow control
                 CmB_SelectShow.SelectedIndex = 0;
-
-                // Clean up any unnecessary resources
-                CSVFileHandler.CleanCSVs();
+                CsvFileManager.CleanCsvFiles();
             }
             catch (Exception ex)
             {
-                // Display any exceptions thrown
                 MessageBox.Show(ex.Message);
             }
-
-            // Enable the GUI elements
-            GUIStatus(true);
+            finally
+            {
+                UpdateGUIStatus(true);
+            }
         }
 
-        private async void Btn_SelectShow_Click(object sender, RoutedEventArgs e)
+        private async void GenerateSeasonEpisodeListClick(object sender, RoutedEventArgs e)
         {
-            // Deactivate the GUI while processing
-            GUIStatus(false);
+            /// <summary>
+            /// Handles the click event for generating a season's episode name list. Validates the user's input,
+            /// downloads necessary files, and creates a text file with episode names for the selected season.
+            /// </summary>
 
-            // Clear season dropdown list if a show has been selected
-            if (!string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
-            {
-                CmB_SelectSeason.Items.Clear();
-                CmB_SelectSeason.Text = "";
-            }
+            UpdateGUIStatus(false);
 
-            // If no show is selected, display an error message and reactivate GUI
-            if (string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
+            if (!IsShowSelectionValid())
             {
-                Cout(RenameSTitelErrorMsg);
-                GUIStatus(true);
+                DisplayMessage(RenameSTitelErrorMsg);
+                UpdateGUIStatus(true);
                 return;
             }
 
             try
             {
-                // Download the list of all shows and save as a CSV file
-                await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
-
-                // If the CSV file doesn't exist, reactivate GUI and return
-                if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
+                if (!await DownloadShowFiles())
                 {
-                    GUIStatus(true);
+                    UpdateGUIStatus(true);
                     return;
                 }
 
-                // Get the URL of the episode CSV file for the selected show
-                string UrlToEpisodeCSV = CSVFileHandler.GetEpsiodeCsvUrls(CmB_SelectShow.Text);
+                string seasonNr = FormatSeasonNumber(CmB_SelectSeason.SelectedIndex + 1);
 
-                // Download the episode CSV file and save it
-                await DownloadWebFile(UrlToEpisodeCSV, _PathToListCSV);
-
-                // If the episode CSV file doesn't exist, reactivate GUI and return
-                if (!CSVFileHandler.CheckforFiles(_PathToListCSV))
+                if (!CsvFileManager.CreateSeasonTextFile(CmB_SelectShow.Text, seasonNr))
                 {
-                    GUIStatus(true);
+                    DisplayMessage(ListGenErrorMsg);
+                    UpdateGUIStatus(true);
                     return;
                 }
 
-                // Get the number of seasons for the selected show
-                int seasonSize = CSVFileHandler.GetSeasonSize(CmB_SelectShow.Text);
-
-                // If there are no seasons, reactivate GUI and return
-                if (seasonSize == 0)
-                {
-                    GUIStatus(true);
-                    return;
-                }
-
-                // Use a loop to add the seasons to the CmB_SelectSeason dropdown list
-                // Use the ternary operator to format the season names correctly
-                for (int i = 0; i < seasonSize; i++)
-                {
-                    CmB_SelectSeason.Items.Add(i <= 8 ? "Season 0" + (i + 1) : "Season " + (i + 1));
-                }
-
-                // Use the ternary operator to display the appropriate message
-                Cout(seasonSize == 1 ? "Found " + seasonSize + " Season!" : "Found " + seasonSize + " Seasons!");
-
-                // If there are no seasons in the dropdown list, reactivate GUI and return
-                if (CmB_SelectSeason.Items.Count == 0)
-                {
-                    GUIStatus(true);
-                    return;
-                }
-
-                // Select the first season in the dropdown list and clean up CSV files
-                CmB_SelectSeason.SelectedIndex = 0;
-                CSVFileHandler.CleanCSVs();
-            }
-            catch (Exception ex)
-            {
-                // If an exception occurs, show an error message
-                MessageBox.Show(ex.Message);
-            }
-
-            // Reactivate GUI
-            GUIStatus(true);
-        }
-
-        private async void Btn_GenSeasonEPNameList_Click(object sender, RoutedEventArgs e)
-        {
-            // Disable buttons to prevent further actions
-            GUIStatus(false);
-
-            // Check if the show and season comboboxes have a selected value
-            if (string.IsNullOrWhiteSpace(CmB_SelectShow.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
-            {
-                GUIStatus(true);
-                //output error message if series name or season number is missing
-                Cout(RenameSTitelErrorMsg);
-                return;
-            }
-
-            try
-            {
-                // Download the All Shows csv file
-                await DownloadWebFile(PathAllShowtxt, _PathToAllShowCSV);
-
-                // Check if the All Shows csv file was downloaded successfully
-                if (!CSVFileHandler.CheckforFiles(_PathToAllShowCSV))
-                {
-                    GUIStatus(true);
-                    return;
-                }
-
-                // Get the url to the selected show's episode csv file
-                string UrlToEpisodeCSV = CSVFileHandler.GetEpsiodeCsvUrls(CmB_SelectShow.Text);
-
-                // Download the episode csv file
-                await DownloadWebFile(UrlToEpisodeCSV, _PathToListCSV);
-
-                // Check if the episode csv file was downloaded successfully
-                if (!CSVFileHandler.CheckforFiles(_PathToListCSV))
-                {
-                    GUIStatus(true);
-                    return;
-                }
-
-                // Get the selected season number
-                int sNr = (CmB_SelectSeason.SelectedIndex + 1);
-
-                // Format the season number to have a leading zero if it is less than 9
-                string seasonNr = (sNr <= 9) ? "0" + sNr.ToString() : sNr.ToString();
-
-                // Generate the episode name list for the selected season
-                if (!CSVFileHandler.GetSeasonTXTFile(CmB_SelectShow.Text, seasonNr))
-                {
-                    GUIStatus(true);
-                    Cout(ListGenErrorMsg);
-                    return;
-                }
-
-                // Print Success Msg.
-                Cout(ListGeneratedSuccessMsg);
+                DisplayMessage(ListGeneratedSuccessMsg);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
-
-            // Activate buttons
-            GUIStatus(true);
-
-            OpenTheList();
+            finally
+            {
+                UpdateGUIStatus(true);
+                OpenListFile();
+            }
         }
 
-        private void Btn_RenameFilesWithList_Click(object sender, RoutedEventArgs e)
+        private void RenameFilesWithListClick(object sender, RoutedEventArgs e)
         {
-            // Deactivate GUI elements
-            GUIStatus(false);
+            /// <summary>
+            /// Handles the click event for the 'Rename Files With List' button. Validates input, checks for list file existence,
+            /// generates a preview of new file names, and performs the file renaming operation.
+            /// </summary>
 
-            // Check if the series name and season number have been entered by the user
-            if (string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
+            UpdateGUIStatus(false);
+
+            if (!IsFileRenameInputValid())
             {
-                // Output error message if series name or season number is missing
-                GUIStatus(true);
-                Cout(RenameSTitelErrorMsg);
+                DisplayMessage(RenameSTitelErrorMsg);
+                UpdateGUIStatus(true);
                 return;
             }
 
-            // Check if list file exists
-            if (!CSVFileHandler.CheckforFiles(_PathToListTXT))
+            if (!CsvFileManager.IsFilePresent(PathToListTxt))
             {
-                // Output error message if list file is missing
-                GUIStatus(true);
-                Cout(NoListFoundErrorMsg);
+                DisplayMessage(NoListFoundErrorMsg);
+                UpdateGUIStatus(true);
                 return;
             }
 
-            // Calculate the season number in the format "S01" or "S02" etc.
-            int sNr = CmB_SelectSeason.SelectedIndex + 1;
-            string sNumber = sNr <= 9 ? "0" + Convert.ToString(sNr) : Convert.ToString(sNr);
+            string sNumber = FormatSeasonNumber(CmB_SelectSeason.SelectedIndex + 1);
 
-            // Create a preview of the new file names using the series name, season number, and file extension
-            List<string[]> fileName = FileNameHandler.DataGridPreview(TxB_SeriesSearch.Text.TrimEnd(), sNumber, GetFileExtension());
-
-            // Check if there are any files that match the search criteria
+            var fileName = MediaFileRenamer.CreateDataGridFilePreview(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
             if (fileName.Count == 0)
             {
-                Cout(NoFilesFoundMsg);
-                GUIStatus(true);
+                DisplayMessage(NoFilesFoundMsg);
+                UpdateGUIStatus(true);
                 return;
             }
 
-            // Show the second window as a modal dialog
-            var gridViewWindowResult = new GridViewWindow();
-
-            // Get the instance of the second window
-            GridViewWindow gridViewWindow = (GridViewWindow)Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window is GridViewWindow);
-
-            if (gridViewWindow == null)
+            if (!DisplayGridViewWindow(fileName))
             {
-                GUIStatus(true);
+                UpdateGUIStatus(true);
                 return;
             }
 
-            // Set the item source for the DataGrid
-            gridViewWindow.DataGrid.ItemsSource = fileName;
-
-            // Create and define the columns for the DataGrid
-            DataGridTextColumn oldNameColumn = new()
-            {
-                Header = "Old Name",
-                Binding = new Binding("[0]"), // Bind to the first element of the array
-                Width = new DataGridLength(1, DataGridLengthUnitType.Star), // Set width to fill available space
-                FontSize = 13,
-                FontFamily = new FontFamily("Poppins")
-            };
-
-            DataGridTextColumn middleColumn = new()
-            {
-                Header = "Separator",
-                Binding = new Binding("[1]"), // Bind to the second element of the array
-                FontSize = 13,
-                FontFamily = new FontFamily("Poppins")
-            };
-
-            DataGridTextColumn newNameColumn = new()
-            {
-                Header = "New Name",
-                Binding = new Binding("[2]"), // Bind to the third element of the array
-                Width = new DataGridLength(1, DataGridLengthUnitType.Star), // Set width to fill available space
-                FontSize = 13,
-                FontFamily = new FontFamily("Poppins")
-            };
-
-            // Add the columns to the DataGrid
-            gridViewWindow.DataGrid.Columns.Add(oldNameColumn);
-            gridViewWindow.DataGrid.Columns.Add(middleColumn);
-            gridViewWindow.DataGrid.Columns.Add(newNameColumn);
-
-            // Hide the column headers
-            gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
-
-            // Open the GridViewWindow as a modal dialog
-            bool? result = gridViewWindowResult.ShowDialog();
-
-            // Check the dialog result and proceed with file renaming if user clicked "OK"
-            if (result != true)
-            {
-                GUIStatus(true);
-                return;
-            }
-
-            // Rename the Files
-            FileNameHandler.RenameFilesWithList(TxB_SeriesSearch.Text.TrimEnd(), sNumber, GetFileExtension());
-            
-            // Output success message after renaming files
-            Cout(RenameSuccessMsg);
-
-            // Restore GUI elements after renaming files
-            GUIStatus(true);
+            MediaFileRenamer.RenameFilesFromList(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
+            DisplayMessage(RenameSuccessMsg);
+            UpdateGUIStatus(true);
         }
 
         #endregion Buttons
 
         #region Private()
 
-        private void OpenTheList()
+        private static DataGridTextColumn CreateGridColumn(string header, string bindingPath)
+        {
+            return new DataGridTextColumn
+            {
+                Header = header,
+                Binding = new Binding(bindingPath),
+                Width = header == "Separator" ? DataGridLength.Auto : new DataGridLength(1, DataGridLengthUnitType.Star),
+                FontSize = 13,
+                FontFamily = new FontFamily("Poppins")
+            };
+        }
+
+        private List<ShowDetails> RetrieveSearchResults()
+        {
+            List<ShowDetails> buffer = CsvFileManager.RetrieveShowsData();
+            return buffer.Where(x => x.Title.Contains(TxB_SeriesSearch.Text, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        private static void ConfigureDataGridColumns(DataGrid dataGrid)
+        {
+            dataGrid.Columns.Add(CreateGridColumn("Old Name", "[0]"));
+            dataGrid.Columns.Add(CreateGridColumn("Separator", "[1]"));
+            dataGrid.Columns.Add(CreateGridColumn("New Name", "[2]"));
+        }
+
+        private static void UpdateProgressBar(int progressPercentage, long _1, long _2)
+        {
+            DisplayMessage(Convert.ToString(progressPercentage) + "%");
+            GUI_MainWindow.PgB_Main.Value = progressPercentage;
+
+            if (GUI_MainWindow.PgB_Main.Value == 100)
+            {
+                GUI_MainWindow.PgB_Main.Value = 0;
+            }
+        }
+
+        private static void OpenListFile()
         {
             try
             {
-                // Open the text file with the default system text editor
                 new Process
                 {
-                    StartInfo = new ProcessStartInfo(_PathToListTXT)
+                    StartInfo = new ProcessStartInfo(PathToListTxt)
                     {
                         UseShellExecute = true
                     }
@@ -448,66 +328,33 @@ namespace Helion
             }
             catch (ArgumentNullException)
             {
-                // Thrown when the file path is null
                 MessageBox.Show("The file path is null.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (System.ComponentModel.Win32Exception)
             {
-                // Thrown when the file does not exist or there is no default editor for the file type
                 try
                 {
-                    // Open the text file with Notepad
-                    Process.Start("notepad.exe", _PathToListTXT);
+                    Process.Start("notepad.exe", PathToListTxt);
                 }
                 catch (Exception)
                 {
-                    // Thrown for any other exception
                     MessageBox.Show("Could not open the file with the default text editor or Notepad.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (Exception)
             {
-                // Thrown for any other exception
                 MessageBox.Show("Could not open the file with the default text editor.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
         }
 
-        private static void SetProgressBarValue(int progressPercentage, long _1, long _2)
+        private static void UpdateGUIStatus(bool state)
         {
-            // Output the current progress percentage
-            Cout(Convert.ToString(progressPercentage) + "%");
+            /// <summary>
+            /// Toggles the enabled status of GUI elements. Used to prevent user interaction during processing.
+            /// </summary>
+            /// <param name="status">Boolean indicating whether to enable or disable the GUI elements.</param>
 
-            // Update the progress bar value
-            GUI_MainWindow.PgB_Main.Value = progressPercentage;
-
-            // Check if the progress has reached 100%
-            if (GUI_MainWindow.PgB_Main.Value == 100)
-            {
-                // Reset the progress bar value
-                GUI_MainWindow.PgB_Main.Value = 0;
-            }
-        }
-
-        private static async Task DownloadWebFile(string url, string fullPath)
-        {
-            // create a new instance of the DownloadManager class with the given url and full path
-            using var client = new DownloadManager(url, fullPath);
-
-            // subscribe to the ProgressChanged event of the DownloadManager
-            client.ProgressChanged += (totalFileSize, totalBytesDownloaded, progressPercentage) =>
-            {
-                // call the SetProgressBarValue function and pass the progress percentage, total file size and total bytes downloaded as arguments
-                SetProgressBarValue((int)progressPercentage, (long)totalFileSize, totalBytesDownloaded);
-            };
-
-            // start the download
-            await client.StartDownload();
-        }
-
-        private static void GUIStatus(bool state)
-        {
-            // Create a list of buttons that need to have their state changed
             List<Button> buttons = new()
             {
                 GUI_MainWindow.Btn_Search,
@@ -516,37 +363,166 @@ namespace Helion
                 GUI_MainWindow.Btn_RenameFilesWithList
             };
 
-            // Iterate through the list of buttons
             foreach (var button in buttons)
             {
-                // Update the button's state
                 button.IsEnabled = state;
             }
         }
 
-        private string GetFileExtension()
+        private static void SanitizeTextBoxInput(TextBox textBox, string invalidChars)
         {
-            // Define a regular expression pattern to match strings containing only letters and numbers
+            /// <summary>
+            /// Removes invalid characters from a given textbox's text. Used in various TextChanged event handlers.
+            /// </summary>
+            /// <param name="textBox">The textbox from which to remove invalid characters.</param>
+            /// <param name="invalidChars">A string containing characters that are considered invalid.</param>
+
+            if (textBox.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
+            {
+                textBox.Text = new string(textBox.Text.Where(c => !invalidChars.Contains(c)).ToArray());
+            }
+        }
+
+        private void ClearShowComboBox()
+        {
+            if (!string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
+            {
+                CmB_SelectShow.Items.Clear();
+                CmB_SelectShow.Text = "";
+            }
+        }
+
+        private void ClearSeasonComboBoxIfShowSelected()
+        {
+            if (!string.IsNullOrWhiteSpace(CmB_SelectSeason.Text))
+            {
+                CmB_SelectSeason.Items.Clear();
+                CmB_SelectSeason.Text = "";
+            }
+        }
+
+        private void FillSeasonDropdown(int seasonSize)
+        {
+            for (int i = 0; i < seasonSize; i++)
+            {
+                CmB_SelectSeason.Items.Add(i <= 8 ? $"Season 0{i + 1}" : $"Season {i + 1}");
+            }
+        }
+
+        private void FillShowDropdown(List<ShowDetails> results)
+        {
+            foreach (var item in results)
+            {
+                CmB_SelectShow.Items.Add(item.Title);
+            }
+        }
+
+        private static async Task DownloadFileFromWeb(string url, string fullPath)
+        {
+            using var client = new DownloadManager(url, fullPath);
+                client.ProgressChanged += (totalFileSize, totalBytesDownloaded, progressPercentage) =>
+                {
+                    UpdateProgressBar((int)progressPercentage, (long)totalFileSize, totalBytesDownloaded);
+                };
+                await client.InitiateDownload();
+        }
+
+        private static async Task<bool> ProcessShowSearchDownload()
+        {
+            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
+            return CsvFileManager.IsFilePresent(PathToAllShowCsv);
+        }
+
+        private async Task<bool> DownloadShowFiles()
+        {
+            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
+            if (!CsvFileManager.IsFilePresent(PathToAllShowCsv)) return false;
+
+            string urlToEpisodeCSV = CsvFileManager.RetrieveEpisodeCsvUrl(CmB_SelectShow.Text);
+            await DownloadFileFromWeb(urlToEpisodeCSV, PathToListCsv);
+            return CsvFileManager.IsFilePresent(PathToListCsv);
+        }
+        
+        private async Task<bool> ProcessShowFileDownload()
+        {
+            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
+            if (!CsvFileManager.IsFilePresent(PathToAllShowCsv)) return false;
+
+            string urlToEpisodeCSV = CsvFileManager.RetrieveEpisodeCsvUrl(CmB_SelectShow.Text);
+            await DownloadFileFromWeb(urlToEpisodeCSV, PathToListCsv);
+            return CsvFileManager.IsFilePresent(PathToListCsv);
+        }
+
+        private static string CreateSearchResultsMessage(int resultCount)
+        {
+            return $"Found {resultCount} match{(resultCount == 1 ? "!" : "es!")}";
+        }
+
+        private static string CreateSeasonsFoundMessage(int seasonSize)
+        {
+            return seasonSize == 1 ? $"Found {seasonSize} Season!" : $"Found {seasonSize} Seasons!";
+        }
+
+        private static string FormatSeasonNumber(int seasonNumber)
+        {
+            /// <summary>
+            /// Formats a season number as a string with a leading zero if less than 10.
+            /// Example: 1 becomes '01', 10 remains '10'.
+            /// </summary>
+            /// <param name="seasonNumber">The season number to format.</param>
+            /// <returns>A formatted string representing the season number.</returns>
+
+            return seasonNumber <= 9 ? $"0{seasonNumber}" : seasonNumber.ToString();
+        }
+
+        private string RetrieveFileExtension()
+        {
             string pattern = @"^[a-zA-Z0-9]+$";
 
-            string result;
-
-            // Check if the length of the TxB_FileExtension.Text is 3 and matches the pattern
             if (TxB_FileExtension.Text.Length == 3 && Regex.IsMatch(TxB_FileExtension.Text, pattern))
             {
-                // TxB_FileExtension.Text is 3 characters long and contains only letters and numbers
-                result = "." + TxB_FileExtension.Text;
+                return "." + TxB_FileExtension.Text;
             }
             else
             {
-                // TxB_FileExtension.Text is not 3 characters long or contains characters that are not letters or numbers
-                // Set TxB_FileExtension.Text to the default FileExtension value
                 TxB_FileExtension.Text = FileExtension;
-                result = "." + FileExtension;
+                return "." + FileExtension;
             }
+        }
 
-            // Return the result
-            return result;
+        private static bool DisplayGridViewWindow(List<string[]> fileName)
+        {
+            /// <summary>
+            /// Creates and displays a GridView window with the specified file names.
+            /// </summary>
+            /// <param name="fileName">A list of file name arrays to display in the GridView window.</param>
+            /// <returns>Boolean indicating whether the user confirmed the action in the GridView window.</returns>
+
+            var gridViewWindow = new GridViewWindow();
+            gridViewWindow.DataGrid.ItemsSource = fileName;
+            ConfigureDataGridColumns(gridViewWindow.DataGrid);
+            gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
+            return gridViewWindow.ShowDialog() == true;
+        }
+
+        private bool IsShowSelectionValid()
+        {
+            return !string.IsNullOrWhiteSpace(CmB_SelectShow.Text) && !string.IsNullOrWhiteSpace(CmB_SelectSeason.Text);
+        }
+
+        private bool IsFileRenameInputValid()
+        {
+            return !string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) && !string.IsNullOrWhiteSpace(CmB_SelectSeason.Text);
+        }
+
+        private bool IsShowSearchInvalid()
+        {
+            return string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) || TxB_SeriesSearch.Text.Equals(TutMsg);
+        }
+
+        private bool IsShowNotSelected()
+        {
+            return string.IsNullOrWhiteSpace(CmB_SelectShow.Text);
         }
 
         #endregion Private()
@@ -555,17 +531,14 @@ namespace Helion
 
         private void TxB_SeriesSearch_GotMouseCapture(object sender, MouseEventArgs e)
         {
-            // Check if the TxB_SeriesSearch textbox contains text and if it equals the tutorial message
             if (!string.IsNullOrWhiteSpace(TxB_SeriesSearch.Text) && TxB_SeriesSearch.Text.Equals(TutMsg))
             {
-                // Clear the contents of the TxB_SeriesSearch textbox
                 TxB_SeriesSearch.Text = "";
             }
         }
 
         private void CmB_SelectShow_DropDownClosed(object sender, EventArgs e)
         {
-            // Set the text of the TxB_SeriesSearch textbox to the selected item in the CmB_SelectShow ComboBox
             TxB_SeriesSearch.Text = CmB_SelectShow.Text;
         }
 
@@ -573,63 +546,35 @@ namespace Helion
         {
             try
             {
-                // Open a new explorer window and navigate to the application directory
-                Process.Start("explorer.exe", _AppDir);
+                Process.Start("explorer.exe", AppDir);
             }
             catch (InvalidOperationException)
             {
-                // Thrown when the operating system is not Windows or there is no file manager available
-                MessageBox.Show("Could not start explorer.exe. The operating system is not Windows or there is no file manager available.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ExplorerErrorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception)
             {
-                // Thrown for any other exception
-                MessageBox.Show("Could not start explorer.exe.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(GenericExplorerErrorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
 
         }
 
         private void TxB_SeriesSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Get the list of invalid filename characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
-
-            // Check if the TxB_SeriesSearch textbox contains any invalid characters
-            if (TxB_SeriesSearch.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
-            {
-                // Remove any invalid characters from the TxB_SeriesSearch textbox
-                TxB_SeriesSearch.Text = new string(TxB_SeriesSearch.Text
-                    .Where(c => !invalidChars.Contains(c)).ToArray());
-            }
+            SanitizeTextBoxInput(TxB_SeriesSearch, invalidChars);
         }
 
         private void TxB_FileExtension_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Get the list of invalid path characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidPathChars()) + ";\'\"<>\\&";
-
-            // Check if the TxB_FileExtension textbox contains any invalid characters
-            if (TxB_FileExtension.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
-            {
-                // Remove any invalid characters from the TxB_FileExtension textbox
-                TxB_FileExtension.Text = new string(TxB_FileExtension.Text
-                    .Where(c => !invalidChars.Contains(c)).ToArray());
-            }
+            SanitizeTextBoxInput(TxB_FileExtension, invalidChars);
         }
 
         private void TxB_NewFileNamePattern_TextChanged(object sender, TextChangedEventArgs e)
         {
-            // Get the list of invalid filename characters and add additional characters that are not allowed
             string invalidChars = new string(Path.GetInvalidFileNameChars()) + ";\'\"<>\\&";
-
-            // Check if the TxB_NewFileNamePattern textbox contains any invalid characters
-            if (TxB_NewFileNamePattern.Text.IndexOfAny(invalidChars.ToCharArray()) >= 0)
-            {
-                // Remove any invalid characters from the TxB_NewFileNamePattern textbox
-                TxB_NewFileNamePattern.Text = new string(TxB_NewFileNamePattern.Text
-                    .Where(c => !invalidChars.Contains(c)).ToArray());
-            }
+            SanitizeTextBoxInput(TxB_NewFileNamePattern, invalidChars);
         }
 
         private void TxB_NewFileNamePattern_LostKeyFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -640,7 +585,26 @@ namespace Helion
             }
         }
 
-        #endregion Events()
+        private void CmB_SelectSeason_DropDownOpened(object sender, EventArgs e)
+        {
+            // Check if the ComboBox is empty
+            if (sender is ComboBox comboBox && comboBox.Items.Count == 0)
+            {
+                // Close the drop-down if there are no items
+                comboBox.IsDropDownOpen = false;
+            }
+        }
 
+        private void CmB_SelectShow_DropDownOpened(object sender, EventArgs e)
+        {
+            // Check if the ComboBox is empty
+            if (sender is ComboBox comboBox && comboBox.Items.Count == 0)
+            {
+                // Close the drop-down if there are no items
+                comboBox.IsDropDownOpen = false;
+            }
+        }
+
+        #endregion Events()
     }
 }

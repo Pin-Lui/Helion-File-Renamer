@@ -16,7 +16,7 @@
                 Content="Search" 
                 Margin="0,12,-2,0" 
                 VerticalAlignment="Top" 
-                Click="Btn_Search_Click"
+                Click="SearchButtonClick"
                 Height="23"
                 FontFamily="Poppins" 
                 HorizontalAlignment="Right" 
@@ -27,7 +27,7 @@
                 HorizontalAlignment="Right" 
                 Margin="0,68,83,0" 
                 VerticalAlignment="Top" 
-                Click="Btn_GenSeasonEPNameList_Click" 
+                Click="GenerateSeasonEpisodeListClick" 
                 Height="23" 
                 Width="134"
                 FontFamily="Poppins"/>
@@ -37,7 +37,7 @@
                 HorizontalAlignment="Right" 
                 Margin="0,68,-2,0" 
                 VerticalAlignment="Top" 
-                Click="Btn_RenameFilesWithList_Click" 
+                Click="RenameFilesWithListClick" 
                 Height="23"
                 FontFamily="Poppins"
                 Width="80"/>
@@ -47,7 +47,7 @@
                 HorizontalAlignment="Right" 
                 Margin="0,40,-2,0" 
                 VerticalAlignment="Top" 
-                Click="Btn_SelectShow_Click"
+                Click="SelectShowButtonClick"
                 Height="23"
                 Width="80"
                 FontFamily="Poppins"/>
@@ -55,17 +55,19 @@
         <ComboBox x:Name="CmB_SelectShow" 
                   Margin="5,40,83,0" 
                   VerticalAlignment="Top" 
-                  DropDownClosed="CmB_SelectShow_DropDownClosed"
                   Height="23" 
                   FontSize="14"
-                  FontFamily="Poppins"/>
+                  FontFamily="Poppins"
+                  DropDownClosed="CmB_SelectShow_DropDownClosed"
+                  DropDownOpened="CmB_SelectShow_DropDownOpened"/>
 
         <ComboBox x:Name="CmB_SelectSeason" 
                   Margin="5,68,222,0" 
                   VerticalAlignment="Top" 
                   Height="23" 
                   FontSize="14"
-                  FontFamily="Poppins"/>
+                  FontFamily="Poppins"
+                  DropDownOpened="CmB_SelectSeason_DropDownOpened"/>
 
         <TextBox x:Name="TxB_SeriesSearch" 
                  Margin="5,12,83,0" 
@@ -95,7 +97,7 @@
                  VerticalAlignment="Top"/>
 
         <TextBox x:Name="TxB_NewFileNamePattern" 
-                 Margin="5,125,0,0" 
+                 Margin="5,125,-2,0" 
                  TextWrapping="Wrap" 
                  Text="" 
                  VerticalAlignment="Top" 
@@ -107,10 +109,10 @@
                  LostKeyboardFocus="TxB_NewFileNamePattern_LostKeyFocus"/>
 
         <Label x:Name="Lbl_Cout"
-               Margin="47,92,2,0" 
+               Margin="47,95,2,0" 
                VerticalAlignment="Top"
                MouseDoubleClick="Lbl_Cout_MouseDoubleClick"
-               Height="31" 
+               Height="28" 
                FontSize="14"
                VerticalContentAlignment="Center" 
                HorizontalContentAlignment="Center"
@@ -124,17 +126,11 @@
                      Foreground="MediumPurple"/>
 
         <Rectangle 
-                   Margin="47,94,-2,0" 
-                   Stroke="#FF252424" 
+                   Margin="47,95.5,-2,0" 
+                   Stroke="#FF2E2E2E" 
                    VerticalAlignment="Top"
-                   Height="23">
-
-            <Rectangle.Fill>
-                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                    <GradientStop Color="#FF313131" Offset="0.14"/>
-                    <GradientStop Color="#FF252424" Offset="1"/>
-                </LinearGradientBrush>
-            </Rectangle.Fill>
+                   Height="25">
+            
         </Rectangle>
 
     </Grid>
