@@ -20,7 +20,7 @@ namespace Helion
         private const string ListGenErrorMsg = "Generating List.txt failed";
         private const string RenameSTitelErrorMsg = "Input Show Titel and Select a Season";
         private const string NoListFoundErrorMsg = "No List.txt Found, Generate it first.";
-        private const string DefaultFileNamePattern = "{Titel} {SNr} {ENr} - {EPName}";
+        private const string DefaultFileNamePattern = "{ Titel } { SeasonNumber } { EpisodeNumber } - { EpisodeName }";
         private const string RenameSuccessMsg = "Files Renamed!";
         private const string ListGeneratedSuccessMsg = "EP List.txt generated!";
         private const string NoFilesFoundMsg = "No Files Found!";
