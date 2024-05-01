@@ -1,7 +1,7 @@
 # Helion-File-Renamer
 
 ## Overview
-**Helion-File-Renamer** is a Windows desktop application designed to automate the renaming of media files using metadata fetched from [Epguides.com](http://epguides.com). This tool simplifies the organization of television series files, enhancing manageability and accessibility.
+**Helion-File-Renamer** is a Windows desktop application designed to automate the renaming of media files using metadata fetched from [Epguides.com](http://epguides.com).
 
 ## Features
 - **Automatic Data Fetching:** Retrieves episode titles and other relevant metadata directly from Epguides.com.
