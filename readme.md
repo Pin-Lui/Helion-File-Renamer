@@ -22,10 +22,8 @@ Download the latest version of Helion-File-Renamer from the releases section on 
 
 ## Usage
 
-1. Open Helion-File-Renamer.
-2. In the application, go to `File` > `Select Directory` to choose the directory containing your media files.
-3. Configure your preferred naming format under `Settings` > `Naming Format`.
-4. Click `Start Renaming` to begin the process.
+1. Put Helion-File-Renamer where you files are.
+2. Open Helion.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
