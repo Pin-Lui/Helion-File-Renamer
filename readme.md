@@ -7,11 +7,10 @@
 - **Automatic Data Fetching:** Retrieves episode titles and other relevant metadata directly from Epguides.com.
 - **Batch Renaming:** Capable of renaming multiple files simultaneously to streamline your media library organization.
 - **Custom Naming Formats:** Users can define custom formats for the renamed files based on their preferences.
-- **User-Friendly Interface:** Simple and intuitive graphical user interface designed specifically for Windows users.
+- **User-Friendly Interface:** Simple and intuitive graphical user interface
 
 ## System Requirements
-- Operating System: Windows 10 or newer
-- .NET Framework 4.7.2 or higher
+- .NET
 
 ## Installation
 
@@ -24,6 +23,7 @@ Download the latest version of Helion-File-Renamer from the releases section on 
 
 1. Put Helion-File-Renamer where you files are.
 2. Open Helion.
+3. it needs permission to create temporary files in the dir
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
