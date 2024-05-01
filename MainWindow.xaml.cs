@@ -20,19 +20,19 @@ namespace Helion
         private const string ListGenErrorMsg = "Generating List.txt failed";
         private const string RenameSTitelErrorMsg = "Input Show Titel and Select a Season";
         private const string NoListFoundErrorMsg = "No List.txt Found, Generate it first.";
-        private const string DefaultFileNamePattern = "{ Titel } { SeasonNumber } { EpisodeNumber } - { EpisodeName }";
+        private const string DefaultFileNamePattern = "{Titel} {SeasonNumber} {EpisodeNumber} - {EpisodeName}";
         private const string RenameSuccessMsg = "Files Renamed!";
         private const string ListGeneratedSuccessMsg = "EP List.txt generated!";
         private const string NoFilesFoundMsg = "No Files Found!";
-        private const string PathAllShowtxt = "https://epguides.com/common/allshows.txt";
+        private const string AllShowTextFilePath = "https://epguides.com/common/allshows.txt";
         private const string FileExtension = "mkv";
         private const string ExplorerErrorMessage = "Could not start explorer.exe. The operating system is not Windows or there is no file manager available.";
         private const string GenericExplorerErrorMessage = "Could not start explorer.exe.";
         private static MainWindow GUI_MainWindow;
-        private static string AppDir => AppDomain.CurrentDomain.BaseDirectory;
-        private static string PathToListTxt => Path.Combine(AppDir, "list.txt");
-        private static string PathToListCsv => Path.Combine(AppDir, "list.csv");
-        private static string PathToAllShowCsv => Path.Combine(AppDir, "allshows.csv");
+        private static string ApplicationDirectory => AppDomain.CurrentDomain.BaseDirectory;
+        private static string ListTxtFilePath => Path.Combine(ApplicationDirectory, "list.txt");
+        private static string ListCsvFilePath => Path.Combine(ApplicationDirectory, "list.csv");
+        private static string AllShowCsvFilePath => Path.Combine(ApplicationDirectory, "allshows.csv");
 
         #endregion Felder
 
@@ -61,19 +61,14 @@ namespace Helion
 
         public string RetrieveFileNamePattern()
         {
+            ValidateString(TxB_NewFileNamePattern.Text, nameof(TxB_NewFileNamePattern.Text));
             string pattern = TxB_NewFileNamePattern.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(pattern))
-            {
-                pattern = DefaultFileNamePattern;
-            }
-
-            return pattern;
+            return string.IsNullOrWhiteSpace(pattern) ? DefaultFileNamePattern : pattern;
         }
 
         public static async void DownloadShowListCsv()
         {
-            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
+            await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
         }
 
         #endregion Public()
@@ -246,7 +241,7 @@ namespace Helion
                 return;
             }
 
-            if (!CsvFileManager.IsFilePresent(PathToListTxt))
+            if (!CsvFileManager.IsFilePresent(ListTxtFilePath))
             {
                 DisplayMessage(NoListFoundErrorMsg);
                 UpdateGUIStatus(true);
@@ -255,7 +250,7 @@ namespace Helion
 
             string sNumber = FormatSeasonNumber(CmB_SelectSeason.SelectedIndex + 1);
 
-            var fileName = MediaFileRenamer.CreateDataGridFilePreview(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
+            var fileName = MediaFileHandler.CreateDataGridFilePreview(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
             if (fileName.Count == 0)
             {
                 DisplayMessage(NoFilesFoundMsg);
@@ -269,7 +264,7 @@ namespace Helion
                 return;
             }
 
-            MediaFileRenamer.RenameFilesFromList(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
+            MediaFileHandler.RenameFilesFromList(TxB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
             DisplayMessage(RenameSuccessMsg);
             UpdateGUIStatus(true);
         }
@@ -280,13 +275,17 @@ namespace Helion
 
         private static DataGridTextColumn CreateGridColumn(string header, string bindingPath)
         {
+            //var style = new Style(typeof(TextBlock));
+            //style.Setters.Add(new Setter(TextBlock.FontSizeProperty, 13));
+            //style.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new FontFamily("pack://application:,,,/Helion;component/Resources/#Comic Mono")));
             return new DataGridTextColumn
             {
                 Header = header,
                 Binding = new Binding(bindingPath),
                 Width = header == "Separator" ? DataGridLength.Auto : new DataGridLength(1, DataGridLengthUnitType.Star),
                 FontSize = 13,
-                FontFamily = new FontFamily("Poppins")
+                //ElementStyle = style
+                //FontFamily = new FontFamily("pack://application:,,,/Helion;component/Resources/#Comic Mono")
             };
         }
 
@@ -320,7 +319,7 @@ namespace Helion
             {
                 new Process
                 {
-                    StartInfo = new ProcessStartInfo(PathToListTxt)
+                    StartInfo = new ProcessStartInfo(ListTxtFilePath)
                     {
                         UseShellExecute = true
                     }
@@ -334,7 +333,7 @@ namespace Helion
             {
                 try
                 {
-                    Process.Start("notepad.exe", PathToListTxt);
+                    Process.Start("notepad.exe", ListTxtFilePath);
                 }
                 catch (Exception)
                 {
@@ -383,6 +382,18 @@ namespace Helion
             }
         }
 
+        private static void ValidateString(string value, string paramName)
+        {
+            /// <summary>
+            /// Validates that a given string is not null or whitespace.
+            /// </summary>
+            /// <param name="value">The string to validate.</param>
+            /// <param name="paramName">The name of the parameter being validated.</param>
+
+            if (string.IsNullOrWhiteSpace(value)) throw new ArgumentNullException(paramName);
+
+        }
+
         private void ClearShowComboBox()
         {
             if (!string.IsNullOrWhiteSpace(CmB_SelectShow.Text))
@@ -429,28 +440,28 @@ namespace Helion
 
         private static async Task<bool> ProcessShowSearchDownload()
         {
-            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
-            return CsvFileManager.IsFilePresent(PathToAllShowCsv);
+            await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
+            return CsvFileManager.IsFilePresent(AllShowCsvFilePath);
         }
 
         private async Task<bool> DownloadShowFiles()
         {
-            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
-            if (!CsvFileManager.IsFilePresent(PathToAllShowCsv)) return false;
+            await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
+            if (!CsvFileManager.IsFilePresent(AllShowCsvFilePath)) return false;
 
             string urlToEpisodeCSV = CsvFileManager.RetrieveEpisodeCsvUrl(CmB_SelectShow.Text);
-            await DownloadFileFromWeb(urlToEpisodeCSV, PathToListCsv);
-            return CsvFileManager.IsFilePresent(PathToListCsv);
+            await DownloadFileFromWeb(urlToEpisodeCSV, ListCsvFilePath);
+            return CsvFileManager.IsFilePresent(ListCsvFilePath);
         }
         
         private async Task<bool> ProcessShowFileDownload()
         {
-            await DownloadFileFromWeb(PathAllShowtxt, PathToAllShowCsv);
-            if (!CsvFileManager.IsFilePresent(PathToAllShowCsv)) return false;
+            await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
+            if (!CsvFileManager.IsFilePresent(AllShowCsvFilePath)) return false;
 
             string urlToEpisodeCSV = CsvFileManager.RetrieveEpisodeCsvUrl(CmB_SelectShow.Text);
-            await DownloadFileFromWeb(urlToEpisodeCSV, PathToListCsv);
-            return CsvFileManager.IsFilePresent(PathToListCsv);
+            await DownloadFileFromWeb(urlToEpisodeCSV, ListCsvFilePath);
+            return CsvFileManager.IsFilePresent(ListCsvFilePath);
         }
 
         private static string CreateSearchResultsMessage(int resultCount)
@@ -502,6 +513,8 @@ namespace Helion
             gridViewWindow.DataGrid.ItemsSource = fileName;
             ConfigureDataGridColumns(gridViewWindow.DataGrid);
             gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
+            //gridViewWindow.DataGrid.FontFamily = new FontFamily("pack://application:,,,/Helion;component/Resources/#Comic Mono");
+            //gridViewWindow.DataGrid.FontSize = 13;
             return gridViewWindow.ShowDialog() == true;
         }
 
@@ -546,7 +559,7 @@ namespace Helion
         {
             try
             {
-                Process.Start("explorer.exe", AppDir);
+                Process.Start("explorer.exe", ApplicationDirectory);
             }
             catch (InvalidOperationException)
             {

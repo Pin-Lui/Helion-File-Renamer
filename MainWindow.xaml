@@ -10,27 +10,39 @@
         Style="{DynamicResource CustomWindowStyle}" 
         ResizeMode="CanResize">
 
-    <Grid x:Name="MainViewGrid" Margin="0,0,8,14">
+    <Grid x:Name="MainViewGrid" Margin="0,0,8,0">
 
         <Button x:Name="Btn_Search" 
-                Content="Search" 
+                Content="Search"
+                FontSize="14"
                 Margin="0,12,-2,0" 
                 VerticalAlignment="Top" 
                 Click="SearchButtonClick"
                 Height="23"
-                FontFamily="Poppins" 
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                 HorizontalAlignment="Right" 
-                Width="80"/>
+                Width="83"/>
+
+        <Button x:Name="Btn_SelectShow" 
+                Content="Select"
+                FontSize="14"
+                HorizontalAlignment="Right" 
+                Margin="0,40,-2,0" 
+                VerticalAlignment="Top" 
+                Click="SelectShowButtonClick"
+                Height="23"
+                Width="83"
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"/>
 
         <Button x:Name="Btn_GenSeasonEPNameList"
-                Content="Get Season EP List" 
+                Content="Create Episode List" 
                 HorizontalAlignment="Right" 
-                Margin="0,68,83,0" 
+                Margin="0,68,86,0" 
                 VerticalAlignment="Top" 
                 Click="GenerateSeasonEpisodeListClick" 
                 Height="23" 
-                Width="134"
-                FontFamily="Poppins"/>
+                Width="131"
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"/>
 
         <Button x:Name="Btn_RenameFilesWithList" 
                 Content="Rename Files" 
@@ -39,25 +51,15 @@
                 VerticalAlignment="Top" 
                 Click="RenameFilesWithListClick" 
                 Height="23"
-                FontFamily="Poppins"
-                Width="80"/>
-
-        <Button x:Name="Btn_SelectShow" 
-                Content="Select" 
-                HorizontalAlignment="Right" 
-                Margin="0,40,-2,0" 
-                VerticalAlignment="Top" 
-                Click="SelectShowButtonClick"
-                Height="23"
-                Width="80"
-                FontFamily="Poppins"/>
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
+                Width="83"/>
 
         <ComboBox x:Name="CmB_SelectShow" 
-                  Margin="5,40,83,0" 
+                  Margin="5,40,86,0" 
                   VerticalAlignment="Top" 
                   Height="23" 
                   FontSize="14"
-                  FontFamily="Poppins"
+                  FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                   DropDownClosed="CmB_SelectShow_DropDownClosed"
                   DropDownOpened="CmB_SelectShow_DropDownOpened"/>
 
@@ -66,19 +68,19 @@
                   VerticalAlignment="Top" 
                   Height="23" 
                   FontSize="14"
-                  FontFamily="Poppins"
+                  FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                   DropDownOpened="CmB_SelectSeason_DropDownOpened"/>
 
         <TextBox x:Name="TxB_SeriesSearch" 
-                 Margin="5,12,83,0" 
+                 Margin="5,12,86,0" 
                  TextWrapping="Wrap" 
                  Text="" 
-                 VerticalAlignment="Top" 
+                 VerticalAlignment="Top"
                  GotMouseCapture="TxB_SeriesSearch_GotMouseCapture" 
                  Height="23" 
                  FontSize="14"
                  TextChanged="TxB_SeriesSearch_TextChanged"
-                 FontFamily="Poppins" 
+                 FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                  TextAlignment="Left"
                  Padding="3,0,0,0"/>
 
@@ -92,7 +94,7 @@
                  Height="23" 
                  FontSize="14"
                  TextChanged="TxB_FileExtension_TextChanged"
-                 FontFamily="Poppins" 
+                 FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                  TextAlignment="Center"
                  VerticalAlignment="Top"/>
 
@@ -102,8 +104,8 @@
                  Text="" 
                  VerticalAlignment="Top" 
                  Height="23" 
-                 FontSize="16"
-                 FontFamily="Poppins" 
+                 FontSize="15"
+                 FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono" 
                  TextAlignment="Center"
                  TextChanged="TxB_NewFileNamePattern_TextChanged" 
                  LostKeyboardFocus="TxB_NewFileNamePattern_LostKeyFocus"/>
@@ -117,7 +119,7 @@
                VerticalContentAlignment="Center" 
                HorizontalContentAlignment="Center"
                Panel.ZIndex="1"
-               FontFamily="Poppins"/>
+               FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"/>
 
         <ProgressBar x:Name="PgB_Main" 
                      Height="14" 

@@ -13,7 +13,7 @@
         <Button x:Name="Btn_Accept" 
                 Content="Accept" 
                 Margin="0,0,95,10"
-                FontFamily="Poppins" 
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                 Click="Btn_Accept_Click" 
                 Height="23" 
                 VerticalAlignment="Bottom" 
@@ -26,7 +26,7 @@
                 Margin="0,0,10,10" 
                 Width="80"
                 Foreground="Blue" 
-                FontFamily="Poppins" 
+                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
                 Click="Btn_Decline_Click" 
                 Height="23" 
                 VerticalAlignment="Bottom"/>
