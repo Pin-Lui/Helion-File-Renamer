@@ -24,6 +24,3 @@ Download the latest version of Helion-File-Renamer from the releases section on 
 1. Put Helion-File-Renamer where you files are.
 2. Open Helion.
 3. it needs permission to create temporary files in the dir
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
