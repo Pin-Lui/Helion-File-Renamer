@@ -8,34 +8,40 @@
         Style="{DynamicResource CustomWindowStyle}" 
         ResizeMode="CanResize">
 
-    <Grid x:Name="GridView" Margin="0,0,8,14">
+    <Grid x:Name="GridView" 
+          Margin="0,0,8,0">
 
-        <Button x:Name="Btn_Accept" 
-                Content="Accept" 
-                Margin="0,0,95,10"
-                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
-                Click="Btn_Accept_Click" 
-                Height="23" 
-                VerticalAlignment="Bottom" 
-                HorizontalAlignment="Right" 
-                Width="80"/>
+        <Button x:Name="BTN_Accept" 
+          Content="Accept" 
+          Margin="0,0,95,7"
+          FontFamily="Bahnschrift"
+          Click="BTN_Accept_Click" 
+          Height="28" 
+          VerticalAlignment="Bottom" 
+          HorizontalAlignment="Right"
+          FontWeight="Light"
+          FontSize="18"      
+          Width="80"/>
 
-        <Button x:Name="Btn_Decline"
-                Content="Decline" 
-                HorizontalAlignment="Right" 
-                Margin="0,0,10,10" 
-                Width="80"
-                Foreground="Blue" 
-                FontFamily="pack://application:,,,/Helion;component/Resources/#Comic Mono"
-                Click="Btn_Decline_Click" 
-                Height="23" 
-                VerticalAlignment="Bottom"/>
+        <Button x:Name="BTN_Decline"
+          Content="Decline" 
+          HorizontalAlignment="Right" 
+          Margin="0,0,10,7" 
+          Width="80"
+          FontFamily="Bahnschrift"
+          Click="BTN_Decline_Click" 
+          Height="28"
+          FontWeight="Light"
+          VerticalAlignment="Bottom"
+          FontSize="18"/>
 
         <DataGrid x:Name="DataGrid" 
-                  Style="{DynamicResource CustomData}"
-                  Margin="20,10,10,40" 
-                  IsReadOnly="True"
-                  IsHitTestVisible="False" 
-                  AutoGenerateColumns="False"/>
+          Style="{DynamicResource CustomData}"
+          Margin="20,10,10,40" 
+          IsReadOnly="True"
+          IsHitTestVisible="False" 
+          AutoGenerateColumns="False"/>
+      
     </Grid>
+  
 </Window>
