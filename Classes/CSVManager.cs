@@ -5,18 +5,12 @@ using System.Windows;
 using System.Collections.Generic;
 using System.Linq;
 using CsvHelper;
-using CsvHelper.Configuration;
 
 namespace Helion
 {
   internal sealed class CSVManager
   {
     #region Fields
-
-    private static string ApplicationDirectory => AppDomain.CurrentDomain.BaseDirectory;
-    private static string ListTxtFilePath => Path.Combine(ApplicationDirectory, "list.txt");
-    private static string ListCsvFilePath => Path.Combine(ApplicationDirectory, "list.csv");
-    private static string AllShowCsvFilePath => Path.Combine(ApplicationDirectory, "allshows.csv");
 
     private readonly string ShowTitle;
     private readonly string SeasonNumber;
@@ -143,7 +137,6 @@ namespace Helion
     {
       if (values == null)
         throw new ArgumentNullException(paramName);
-
       foreach (var value in values)
       {
         if (string.IsNullOrWhiteSpace(value))
@@ -153,7 +146,7 @@ namespace Helion
 
     private void DeleteCsvFiles()
     {
-      string[] filesToDelete = [AllShowCsvFilePath, ListCsvFilePath];
+      string[] filesToDelete = [MainWindow.AllShowCsvFilePath, MainWindow.ListCsvFilePath];
       foreach (string file in filesToDelete)
       {
         if (!File.Exists(file))
@@ -173,13 +166,13 @@ namespace Helion
 
     private static void ClearListTxtFile()
     {
-      if (!File.Exists(ListTxtFilePath))
+      if (!File.Exists(MainWindow.ListTxtFilePath))
       {
         return;
       }
       try
       {
-        File.WriteAllText(ListTxtFilePath, string.Empty);
+        File.WriteAllText(MainWindow.ListTxtFilePath, string.Empty);
       }
       catch (IOException ioExp)
       {
@@ -215,11 +208,16 @@ namespace Helion
 
     private List<ShowDetails> RetrieveAllShowsData()
     {
-      if (!File.Exists(AllShowCsvFilePath))
+      if (MainWindow.ShowsBuffered())
+      { 
+        App app = Application.Current as App;
+        return app.ShowBuffer;
+      }
+      if (!File.Exists(MainWindow.AllShowCsvFilePath))
       {
         return [];
       }
-      using var reader = new StreamReader(AllShowCsvFilePath);
+      using var reader = new StreamReader(MainWindow.AllShowCsvFilePath);
       using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
       csv.Context.RegisterClassMap<ShowDetailsMapping>();
       var allshowsBuffer = csv.GetRecords<ShowDetails>().ToList();
@@ -228,11 +226,11 @@ namespace Helion
 
     private List<EpisodeDetails> RetrieveAllEpisodesData()
     {
-      if (!File.Exists(ListCsvFilePath) || !StripHtmlFromCsv())
+      if (!File.Exists(MainWindow.ListCsvFilePath) || !StripHtmlFromCsv())
       {
         return [];
       }
-      using var reader = new StreamReader(ListCsvFilePath);
+      using var reader = new StreamReader(MainWindow.ListCsvFilePath);
       using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
       csv.Context.RegisterClassMap<EpisodeDetailsMapping>();
       var allEpisodeBuffer = csv.GetRecords<EpisodeDetails>().ToList();
@@ -261,9 +259,9 @@ namespace Helion
       List<string> episodeNames = [.. selectedEpisodes
         .Select(item => Regex.Replace(item.Title, leadingDotsPattern, string.Empty))
         .Select(cleanedTitle => Regex.Replace(cleanedTitle, invalidCharsPattern, string.Empty))];
-      WriteLinesToFile(ListTxtFilePath, [.. episodeNames]);
+      WriteLinesToFile(MainWindow.ListTxtFilePath, [.. episodeNames]);
       DeleteCsvFiles();
-      return IsFilePresent(ListTxtFilePath);
+      return IsFilePresent(MainWindow.ListTxtFilePath);
     }
 
     private static bool StripHtmlFromCsv()
@@ -272,16 +270,16 @@ namespace Helion
       string apostrophe = "'";
       string combinedPattern = @"<(.|\n)*?>|(List Output)";
 
-      if (!File.Exists(ListCsvFilePath))
+      if (!File.Exists(MainWindow.ListCsvFilePath))
       {
         return false;
       }
-      var cleanedLines = File.ReadAllLines(ListCsvFilePath)
+      var cleanedLines = File.ReadAllLines(MainWindow.ListCsvFilePath)
         .Select(line => Regex.Replace(line, combinedPattern, string.Empty))
         .Select(line => line.Replace(htmlapostrophe, apostrophe))
         .Where(line => !string.IsNullOrWhiteSpace(line))
         .ToArray();
-      File.WriteAllLines(ListCsvFilePath, cleanedLines);
+      File.WriteAllLines(MainWindow.ListCsvFilePath, cleanedLines);
       return true;
     }
 
@@ -303,63 +301,4 @@ namespace Helion
 
     #endregion Private()
   }
-
-  internal sealed class ShowDetails
-  {
-    public string Title { get; set; }
-    public string Directory { get; set; }
-    public string Tvrage { get; set; }
-    public string TVmaze { get; set; }
-    public string StartDate { get; set; }
-    public string EndDate { get; set; }
-    public string NumberOfEpisodes { get; set; }
-    public string RunTime { get; set; }
-    public string Network { get; set; }
-    public string Country { get; set; }
-    public string Onhiatus { get; set; }
-    public string Onhiatusdesc { get; set; }
-  }
-
-  internal sealed class ShowDetailsMapping : ClassMap<ShowDetails>
-  {
-    public ShowDetailsMapping()
-    {
-      Map(m => m.Title).Name("title");
-      Map(m => m.Directory).Name("directory");
-      Map(m => m.Tvrage).Name("tvrage");
-      Map(m => m.TVmaze).Name("TVmaze");
-      Map(m => m.StartDate).Name("start date");
-      Map(m => m.EndDate).Name("end date");
-      Map(m => m.NumberOfEpisodes).Name("number of episodes");
-      Map(m => m.RunTime).Name("run time");
-      Map(m => m.Network).Name("network");
-      Map(m => m.Country).Name("country");
-      Map(m => m.Onhiatus).Name("onhiatus");
-      Map(m => m.Onhiatusdesc).Name("onhiatusdesc");
-    }
-  }
-
-  internal sealed class EpisodeDetails
-  {
-    public string EPNumber { get; set; }
-    public string Season { get; set; }
-    public string Episode { get; set; }
-    public string Airdate { get; set; }
-    public string Title { get; set; }
-    public string TvmazeLink { get; set; }
-  }
-
-  internal sealed class EpisodeDetailsMapping : ClassMap<EpisodeDetails>
-  {
-    public EpisodeDetailsMapping()
-    {
-      Map(m => m.EPNumber).Name("number");
-      Map(m => m.Season).Name("season");
-      Map(m => m.Episode).Name("episode");
-      Map(m => m.Airdate).Name("airdate");
-      Map(m => m.Title).Name("title");
-      Map(m => m.TvmazeLink).Name("tvmaze link");
-    }
-  }
-
 }

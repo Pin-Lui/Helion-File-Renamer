@@ -15,10 +15,10 @@ namespace Helion
   {
     #region Fields
 
-    private static string ApplicationDirectory => AppDomain.CurrentDomain.BaseDirectory;
-    private static string ListTxtFilePath => Path.Combine(ApplicationDirectory, "list.txt");
-    private static string ListCsvFilePath => Path.Combine(ApplicationDirectory, "list.csv");
-    private static string AllShowCsvFilePath => Path.Combine(ApplicationDirectory, "allshows.csv");
+    public static string ApplicationDirectory => AppDomain.CurrentDomain.BaseDirectory;
+    public static string ListTxtFilePath => Path.Combine(ApplicationDirectory, "list.txt");
+    public static string ListCsvFilePath => Path.Combine(ApplicationDirectory, "list.csv");
+    public static string AllShowCsvFilePath => Path.Combine(ApplicationDirectory, "allshows.csv");
     private static MainWindow MainGUI;
 
     private const string TutMsg = "Input Show Titel Here";
@@ -75,6 +75,45 @@ namespace Helion
 
     #region Buttons
 
+    private async void SearchButtonClick(object sender, RoutedEventArgs e)
+    {
+      ButtonsOn(false);
+      ClearShowComboBox();
+      if (IsShowSearchInvalid())
+      {
+        DisplayMessage(RenameSTitelErrorMsg);
+        ButtonsOn(true);
+        return;
+      }
+      CMB_SelectSeason.Items.Clear();
+      try
+      {
+        if (!ShowsBuffered() && !await DownloadShowDB())
+        {
+          ButtonsOn(true);
+          return;
+        }
+        var results = LoadSearchResults();
+        AddBoxItem(results);
+        DisplayMessage(CreateSearchResultsMessage(results.Count));
+        if (CMB_SelectShow.Items.Count == 0)
+        {
+          ButtonsOn(true);
+          return;
+        }
+        CMB_SelectShow.SelectedIndex = 0;
+        CSVManager.CleanCsvFiles();
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show(ex.Message);
+      }
+      finally
+      {
+        ButtonsOn(true);
+      }
+    }
+
     private async void SelectShowButtonClick(object sender, RoutedEventArgs e)
     {
       ButtonsOn(false);
@@ -87,7 +126,7 @@ namespace Helion
       }
       try
       {
-        if (!await ProcessShowFileDownload())
+        if (!await DownloadEpisodeDB())
         {
           ButtonsOn(true);
           return;
@@ -118,45 +157,6 @@ namespace Helion
       }
     }
 
-    private async void SearchButtonClick(object sender, RoutedEventArgs e)
-    {
-      ButtonsOn(false);
-      ClearShowComboBox();
-      if (IsShowSearchInvalid())
-      {
-        DisplayMessage(RenameSTitelErrorMsg);
-        ButtonsOn(true);
-        return;
-      }
-      CMB_SelectSeason.Items.Clear();
-      try
-      {
-        if (!await ProcessShowSearchDownload())
-        {
-          ButtonsOn(true);
-          return;
-        }
-        var results = RetrieveSearchResults();
-        AddBoxItem(results);
-        DisplayMessage(CreateSearchResultsMessage(results.Count));
-        if (CMB_SelectShow.Items.Count == 0)
-        {
-          ButtonsOn(true);
-          return;
-        }
-        CMB_SelectShow.SelectedIndex = 0;
-        CSVManager.CleanCsvFiles();
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show(ex.Message);
-      }
-      finally
-      {
-        ButtonsOn(true);
-      }
-    }
-
     private async void GenerateSeasonEpisodeListClick(object sender, RoutedEventArgs e)
     {
       ButtonsOn(false);
@@ -168,7 +168,7 @@ namespace Helion
       }
       try
       {
-        if (!await DownloadShowFiles())
+        if (!await DownloadEpisodeDB())
         {
           ButtonsOn(true);
           return;
@@ -209,7 +209,7 @@ namespace Helion
         return;
       }
       string sNumber = FormatSeasonNumber(CMB_SelectSeason.SelectedIndex + 1);
-      var fileName = MediaFileHandler.CreateDataGridFilePreview(TXB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
+      var fileName = FileHandler.CreateDataGridFilePreview(TXB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
       if (fileName.Count == 0)
       {
         DisplayMessage(NoFilesFoundMsg);
@@ -221,7 +221,7 @@ namespace Helion
         ButtonsOn(true);
         return;
       }
-      MediaFileHandler.RenameFilesFromList(TXB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
+      FileHandler.RenameFilesFromList(TXB_SeriesSearch.Text.TrimEnd(), sNumber, RetrieveFileExtension());
       DisplayMessage(RenameSuccessMsg);
       ButtonsOn(true);
     }
@@ -241,10 +241,15 @@ namespace Helion
       };
     }
 
-    private List<ShowDetails> RetrieveSearchResults()
+    private List<ShowDetails> LoadSearchResults()
     {
-      List<ShowDetails> buffer = CSVManager.RetrieveShowsData();
-      return [.. buffer.Where(x => x.Title.Contains(TXB_SeriesSearch.Text, StringComparison.OrdinalIgnoreCase))];
+      App app = Application.Current as App;
+      if (!ShowsBuffered())
+      {
+        List<ShowDetails> shows = CSVManager.RetrieveShowsData();
+        app.ShowBuffer = shows;
+      }
+      return [.. app.ShowBuffer.Where(x => x.Title.Contains(TXB_SeriesSearch.Text, StringComparison.OrdinalIgnoreCase))];
     }
 
     private static void ConfigureDataGridColumns(DataGrid dataGrid)
@@ -372,25 +377,19 @@ namespace Helion
       await client.InitiateDownload();
     }
 
-    private static async Task<bool> ProcessShowSearchDownload()
+    private static async Task<bool> DownloadShowDB()
     {
       await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
       return CSVManager.IsFilePresent(AllShowCsvFilePath);
     }
 
-    private async Task<bool> DownloadShowFiles()
+    private async Task<bool> DownloadEpisodeDB()
     {
-      await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
-      if (!CSVManager.IsFilePresent(AllShowCsvFilePath)) return false;
-      string urlToEpisodeCSV = CSVManager.RetrieveEpisodeCsvUrl(CMB_SelectShow.Text);
-      await DownloadFileFromWeb(urlToEpisodeCSV, ListCsvFilePath);
-      return CSVManager.IsFilePresent(ListCsvFilePath);
-    }
-
-    private async Task<bool> ProcessShowFileDownload()
-    {
-      await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
-      if (!CSVManager.IsFilePresent(AllShowCsvFilePath)) return false;
+      if (!ShowsBuffered())
+      {
+        await DownloadFileFromWeb(AllShowTextFilePath, AllShowCsvFilePath);
+        if (!CSVManager.IsFilePresent(AllShowCsvFilePath)) return false;
+      }
       string urlToEpisodeCSV = CSVManager.RetrieveEpisodeCsvUrl(CMB_SelectShow.Text);
       await DownloadFileFromWeb(urlToEpisodeCSV, ListCsvFilePath);
       return CSVManager.IsFilePresent(ListCsvFilePath);
@@ -433,6 +432,11 @@ namespace Helion
       ConfigureDataGridColumns(gridViewWindow.DataGrid);
       gridViewWindow.DataGrid.HeadersVisibility = DataGridHeadersVisibility.None;
       return gridViewWindow.ShowDialog() == true;
+    }
+
+    public static bool ShowsBuffered()
+    {
+      return Application.Current is App app && app.ShowBuffer != null && app.ShowBuffer.Count > 0;
     }
 
     private bool IsShowSelectionValid()
@@ -532,6 +536,5 @@ namespace Helion
     }
 
     #endregion Events()
-
   }
 }

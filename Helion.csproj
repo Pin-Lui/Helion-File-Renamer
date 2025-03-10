@@ -11,8 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Resources\ComicMono.ttf" />
-    <None Remove="Resources\helvetica.ttf" />
     <None Remove="windowsdesktop-runtime-7.0.4-win-x86.exe" />
   </ItemGroup>
   

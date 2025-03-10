@@ -9,7 +9,7 @@
         ResizeMode="CanResize">
 
     <Grid x:Name="GridView" 
-          Margin="0,0,8,0">
+      Margin="0,0,8,0">
 
         <Button x:Name="BTN_Accept" 
           Content="Accept" 

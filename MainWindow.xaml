@@ -11,7 +11,7 @@
   ResizeMode="CanResize">
 
   <Grid x:Name="MainViewGrid" 
-      Margin="0,0,6,0">
+    Margin="0,0,6,0">
 
     <Button x:Name="BTN_Search" 
       Content="Search"
@@ -51,7 +51,7 @@
 
     <Button x:Name="BTN_RenameFilesWithList"
       FontSize="18"
-      Content="Rename Files" 
+      Content="Preview Filenames" 
       Margin="225,144,0,0" 
       VerticalAlignment="Top" 
       Click="RenameFilesWithListClick" 
