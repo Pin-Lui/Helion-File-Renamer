@@ -30,7 +30,7 @@
 - **User-Friendly Interface:** Simple and intuitive graphical user interface
 
 ## System Requirements
-- .NET
+- .NET 9 or Higher
 
 ## Installation
 
