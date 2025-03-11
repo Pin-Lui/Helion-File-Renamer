@@ -28,6 +28,7 @@
 - **Batch Renaming:** Capable of renaming multiple files simultaneously to streamline your media library organization.
 - **Custom Naming Formats:** Users can define custom formats for the renamed files based on their preferences.
 - **User-Friendly Interface:** Simple and intuitive graphical user interface
+- **Dosent use Appdata or any other settings 100% Portable**
 
 ## System Requirements
 - .NET 9 or Higher
