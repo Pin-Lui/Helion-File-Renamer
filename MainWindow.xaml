@@ -126,7 +126,7 @@
       Margin="5,177,0,0" 
       VerticalAlignment="Top"
       MouseDoubleClick="Lbl_Cout_MouseDoubleClick"
-      Height="28" 
+      Height="30" 
       FontSize="18"
       VerticalContentAlignment="Center" 
       HorizontalContentAlignment="Center"
@@ -186,7 +186,7 @@
       Margin="5,177,0,0" 
       Stroke="#FF2E2E2E" 
       VerticalAlignment="Top"
-      Height="28">
+      Height="30">
     </Rectangle>
 
   </Grid>

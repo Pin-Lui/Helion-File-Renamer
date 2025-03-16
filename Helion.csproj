@@ -11,10 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="windowsdesktop-runtime-7.0.4-win-x86.exe" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <Content Include="Resources\walter-white32.ico" />
   </ItemGroup>
 
